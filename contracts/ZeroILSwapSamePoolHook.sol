@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./ZeroILHook.sol";
+import {PoolId} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {ZeroILHook} from "./ZeroILHook.sol";
 
 contract ZeroILSwapSamePoolHook is ZeroILHook {
     uint256 MAX_SWAP_SLIPPAGE_PERCENTAGE_X96 = FixedPoint96.Q96 / 100; //  = 0.1% (100% = FixedPoint96.Q96)

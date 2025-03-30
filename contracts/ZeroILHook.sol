@@ -1,21 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
-import "@uniswap/v4-core/src/types/PoolId.sol";
-import "@uniswap/v4-core/src/types/Currency.sol";
-import "@uniswap/v4-core/src/types/BalanceDelta.sol";
-import "@uniswap/v4-core/src/libraries/FullMath.sol";
-import "@uniswap/v4-core/src/libraries/FixedPoint96.sol";
-import "@uniswap/v4-core/src/libraries/TickMath.sol";
-import "@uniswap/v4-core/src/libraries/Position.sol";
-import "@uniswap/v4-core/src/libraries/SafeCast.sol";
-import "./uniswap-v4-periphery/BaseHook.sol";
-import "./uniswap-v4-periphery/LiquidityAmounts.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {Currency, CurrencyLibrary} from  "@uniswap/v4-core/src/types/Currency.sol";
+import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+import {FixedPoint96} from "@uniswap/v4-core/src/libraries/FixedPoint96.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
+import {SafeCast} from "@uniswap/v4-core/src/libraries/SafeCast.sol";
+import {BaseHook} from "@uniswap/v4-periphery/src/utils/BaseHook.sol";
+import {LiquidityAmounts} from "@uniswap/v4-periphery/src/libraries/LiquidityAmounts.sol";
 
 abstract contract ZeroILHook is BaseHook, ERC1155, Ownable {
     using SafeERC20 for IERC20;
@@ -79,11 +81,9 @@ abstract contract ZeroILHook is BaseHook, ERC1155, Ownable {
         poolConfig[poolId] = config;
     }
 
-    /**
-     * @notice Defines the hook calls which should be triggered by the PoolManager
-     */
-    function getHooksCalls() public pure override returns (Hooks.Calls memory) {
-        return Hooks.Calls({
+    /// @inheritdoc BaseHook
+    function getHookPermissions() public pure virtual returns (Hooks.Permissions memory){
+        return Hooks.Permissions({
             beforeInitialize: false,
             afterInitialize: true,
             beforeModifyPosition: false,
@@ -91,8 +91,12 @@ abstract contract ZeroILHook is BaseHook, ERC1155, Ownable {
             beforeSwap: false,
             afterSwap: true,
             beforeDonate: false,
-            afterDonate: false
-        });
+            afterDonate: false,
+            beforeSwapReturnDelta: false,
+            afterSwapReturnDelta: false,
+            afterAddLiquidityReturnDelta: false,
+            afterRemoveLiquidityReturnDelta: false
+        });        
     }
 
     /**
@@ -104,7 +108,7 @@ abstract contract ZeroILHook is BaseHook, ERC1155, Ownable {
     * param hookData Arbitrary data handed into the PoolManager by the initializer to be be passed on to the hook
     * @return bytes4 The function selector for the hook
     */
-    function afterInitialize(address /*sender*/, PoolKey calldata key, uint160 /*sqrtPriceX96*/, int24 /*tick*/, bytes calldata /*hookData*/) external override poolManagerOnly returns (bytes4) {
+    function afterInitialize(address /*sender*/, PoolKey calldata key, uint160 /*sqrtPriceX96*/, int24 /*tick*/, bytes calldata /*hookData*/) external override onlyPoolManager returns (bytes4) {
         PoolId poolId = key.toId();
         PoolData storage pd = poolData[poolId];
         PoolConfig storage pc = poolConfig[poolId]; // This should be set before initializing Pool
@@ -127,7 +131,7 @@ abstract contract ZeroILHook is BaseHook, ERC1155, Ownable {
     * param hookData Arbitrary data handed into the PoolManager by the swapper to be be passed on to the hook
     * @return bytes4 The function selector for the hook     
     */
-    function afterSwap(address /*sender*/, PoolKey calldata key, IPoolManager.SwapParams calldata /*params*/, BalanceDelta /*delta*/, bytes calldata /*hookData*/) external override poolManagerOnly returns (bytes4) {
+    function afterSwap(address /*sender*/, PoolKey calldata key, IPoolManager.SwapParams calldata /*params*/, BalanceDelta /*delta*/, bytes calldata /*hookData*/) external override onlyPoolManager returns (bytes4) {
         PoolId poolId = key.toId();
         PoolData storage pd = poolData[poolId];
         PoolConfig storage pc = poolConfig[poolId];

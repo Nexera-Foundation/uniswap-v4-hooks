@@ -35,11 +35,8 @@
     "dependencies": {
         "@openzeppelin/contracts": "^5.2.0",
         "@openzeppelin/contracts-upgradeable": "^5.2.0",
-        "@uniswap/lib": "^4.0.1-alpha",
-        "@uniswap/v3-core": "^1.0.1",
-        "@uniswap/v3-periphery": "npm:uniswap-v3-periphery-0.8",
-        "@uniswap/v3-sdk": "^3.10.0",
-        "@uniswap/v4-core": "https://github.com/Uniswap/v4-core#320d5d76ae7d52188c011b0e4adb8181f685e1e5"
+        "@uniswap/v4-core": "^1.0.1",
+        "@uniswap/v4-periphery": "^1.0.1"
     },
     "packageManager": "yarn@1.22.22"
 }
