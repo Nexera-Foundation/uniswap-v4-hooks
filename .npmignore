@@ -1,0 +1,49 @@
+# Exclude test directory (mock contracts) from contracts package
+contracts/test
+contracts/tests
+
+# Exclude external packages
+node_modules/
+
+# Exclude build files from contracts package
+build/
+typechain/
+cache/
+artifacts/
+
+# Exclude deployment scripts from contracts package
+deploy/
+
+# Exclude unnecessary deployment artifacts from contracts package
+deployments/
+
+# Exclude scripts & shared directory from contracts package
+scripts/
+shared/
+
+# Exclude tests directory from contracts package
+tests/
+
+# Exclude development configuration files from contracts package
+.editorconfig
+.gitattributes
+.eslintignore
+.eslintrc.js
+.prettierignore
+.prettierrc.json
+.solhint.json
+hardhat.config.ts
+hardhat.networks.ts
+Makefile
+slither.config.json
+tsconfig.json
+coverage.json
+
+# Exclude sensitive files
+.npmrc
+.npmrc.example
+.env
+.env.example
+
+# Ignore lock files
+*.lock
