@@ -250,11 +250,11 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
         poolManager.unlock(actionData);
     }
 
-    function _encodePoolAction(PoolAction action, bytes memory arguments) private returns (bytes memory) {
+    function _encodePoolAction(PoolAction action, bytes memory arguments) private pure returns (bytes memory) {
         return abi.encodePacked(uint8(action), arguments);
     }
 
-    function _decodePoolAction(bytes calldata data) private returns (PoolAction action, bytes calldata arguments) {
+    function _decodePoolAction(bytes calldata data) private pure returns (PoolAction action, bytes calldata arguments) {
         require(data.length > 0, InvalidUnlockCallbackDataLength());
         return (PoolAction(uint8(data[0])), data[1:]);
     }

@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {ZeroILHook} from "./ZeroILHook.sol";
 
 contract ZeroILSwapSamePoolHook is ZeroILHook {
@@ -20,7 +24,7 @@ contract ZeroILSwapSamePoolHook is ZeroILHook {
         PoolKey memory pk = _recoverPoolKey(poolData[poolId]);
         // TODO: Verify implementation above as same as commented varian below.
         // especially check uint256 to int256 conversion
-        return _swap(pk, int256(amount), "");
+        return _swap(pk, zeroForOne, int256(amount), "");
     }
 
     /**
@@ -28,7 +32,7 @@ contract ZeroILSwapSamePoolHook is ZeroILHook {
      * @dev if amountSpecified < 0, the swap is exactInput, otherwise exactOutput
      * NOTE: Copied from uniswap/v4-periphery/src/base/BaseV4Quoter.sol
      */
-    function _swap(PoolKey memory poolKey, bool zeroForOne, int256 amountSpecified, bytes calldata hookData) internal returns (BalanceDelta swapDelta) {
+    function _swap(PoolKey memory poolKey, bool zeroForOne, int256 amountSpecified, bytes memory hookData) internal returns (BalanceDelta swapDelta) {
         swapDelta = poolManager.swap(
             poolKey,
             IPoolManager.SwapParams({
