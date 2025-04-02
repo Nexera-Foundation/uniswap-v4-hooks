@@ -24,7 +24,16 @@ import {BaseHook} from "@uniswap/v4-periphery/src/utils/BaseHook.sol";
 import {LiquidityAmounts} from "@uniswap/v4-periphery/src/libraries/LiquidityAmounts.sol";
 import {LiquidityAmountsExtra} from "./utils/LiquidityAmountsExtra.sol";
 import {SafeCallback} from "./utils/SafeCallback.sol";
-
+/**
+ * - Users can add liquidity
+ *   - directly to the Pool
+ *   - via the Hook - in this case they receive ERC1155 token issued by the Hook which represents their part of Hook's liquidity and reserves in the Pool
+ * - Hook maintains his position in the Pool and some reserves (funds used to compensate IL)
+ * - After each swap it verifies the difference between old and new tick (tick represents ratio between Pool assets) to find out if it need to shift it's liquidity position or  not yet (distance required to shift is defined on Hook initialization)
+ * - If Position shift required, Hook calculates IL between old and new positions. and decides which currency it needs to buy/sell to compensate IL.
+ *    - If Hook has reserves in currency it needs to buy, then it removes some liquidity and swaps it.
+ *    - Otherwise (if he has reserves in currency it needs to sell) it just swaps it (or if reserve is not enough - withdraws from the Hook's position what is needed)
+ */
 abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155, Ownable {
     using SafeERC20 for IERC20;
     using PoolIdLibrary for PoolKey;
