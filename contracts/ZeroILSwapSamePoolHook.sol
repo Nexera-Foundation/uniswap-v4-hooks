@@ -20,7 +20,7 @@ contract ZeroILSwapSamePoolHook is ZeroILHook {
      * @dev Executes IL compensation swap on the provided Uniswap V4 pool
      * @inheritdoc ZeroILHook
      */
-    function executeCompensateILSwapInsideLock(PoolId poolId, bool zeroForOne, uint256 amount) internal override returns (BalanceDelta) {
+    function _executeCompensateILSwapWhileUnlocked(PoolId poolId, bool zeroForOne, uint256 amount) internal override returns (BalanceDelta) {
         PoolKey memory pk = _recoverPoolKey(poolData[poolId]);
         // TODO: Verify implementation above as same as commented varian below.
         // especially check uint256 to int256 conversion

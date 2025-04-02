@@ -88,7 +88,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
      * @param zeroForOne Defines swap direction: if true, sell token0 to buy token1
      * @param amount amount to sell
      */
-    function executeCompensateILSwapInsideLock(PoolId poolId, bool zeroForOne, uint256 amount) internal virtual returns (BalanceDelta swapDelta);
+    function _executeCompensateILSwapWhileUnlocked(PoolId poolId, bool zeroForOne, uint256 amount) internal virtual returns (BalanceDelta swapDelta);
 
     function setConfig(PoolKey calldata key, PoolConfig calldata config) external onlyOwner {
         PoolId poolId = key.toId();
@@ -422,7 +422,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
                 ""
             );
 
-            executeCompensateILSwapInsideLock(poolId, zeroForOne, ilAmount);
+            _executeCompensateILSwapWhileUnlocked(poolId, zeroForOne, ilAmount);
         } else {
             // We need to spend reserve to buy another currency
             uint128 liquidityInReserve = _getLiquidityForAmount(zeroForOne, pd.zeroILReserveAmount, pd.currentPosition);
@@ -457,7 +457,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
                 ""
             );
 
-            executeCompensateILSwapInsideLock(poolId, zeroForOne, zeroForOne ? swapAmount0 : swapAmount1);
+            _executeCompensateILSwapWhileUnlocked(poolId, zeroForOne, zeroForOne ? swapAmount0 : swapAmount1);
         }
 
         // Settle everything
