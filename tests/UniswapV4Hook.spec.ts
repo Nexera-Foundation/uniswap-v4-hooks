@@ -9,16 +9,23 @@ import { BigNumber } from "ethers";
 
 let mainSnap: any;
 
-const HOOK_CALLS = {
+const HOOK_PERMISSIONS = {
     beforeInitialize: false,
     afterInitialize: true,
-    beforeModifyPosition: false,
-    afterModifyPosition: false,
+    beforeAddLiquidity: false,
+    afterAddLiquidity: false,
+    beforeRemoveLiquidity: false,
+    afterRemoveLiquidity: false,
     beforeSwap: false,
     afterSwap: true,
     beforeDonate: false,
-    afterDonate: false    
+    afterDonate: false,
+    beforeSwapReturnDelta: false,
+    afterSwapReturnDelta: false,
+    afterAddLiquidityReturnDelta: false,
+    afterRemoveLiquidityReturnDelta: false
 }
+
 
 const ONE_TOKEN = ethers.utils.parseEther("1")
 
@@ -81,7 +88,7 @@ export default async function suite() {
             do {
                 salt +=1;
                 computedAddress = await UniswapV4Hook.computeAddress(hookBytecode, hookArgs, ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32));
-                found = await UniswapV4Hook.verifyHookAddress(computedAddress, HOOK_CALLS);
+                found = await UniswapV4Hook.verifyHookAddressPermissions(computedAddress, HOOK_PERMISSIONS);
             }  while(!found && salt < 1000);
             if(!found) {
                 console.error("Could not find correct salt. Deployment failed.");
