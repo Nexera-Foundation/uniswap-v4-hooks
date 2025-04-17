@@ -20,11 +20,7 @@ library HookMiner {
     /// @param creationCode The creation code of a hook contract. Example: `type(Counter).creationCode`
     /// @param constructorArgs The encoded constructor arguments of a hook contract. Example: `abi.encode(address(manager))`
     /// @return (hookAddress, salt) The hook deploys to `hookAddress` when using `salt` with the syntax: `new Hook{salt: salt}(<constructor arguments>)`
-    function find(address deployer, uint160 flags, bytes memory creationCode, bytes memory constructorArgs)
-        internal
-        view
-        returns (address, bytes32)
-    {
+    function find(address deployer, uint160 flags, bytes memory creationCode, bytes memory constructorArgs) internal view returns (address, bytes32) {
         flags = flags & FLAG_MASK; // mask for only the bottom 14 bits
         bytes memory creationCodeWithArgs = abi.encodePacked(creationCode, constructorArgs);
 
@@ -45,13 +41,7 @@ library HookMiner {
     /// In `forge script`, this should be `0x4e59b44847b379578588920cA78FbF26c0B4956C` (CREATE2 Deployer Proxy)
     /// @param salt The salt used to deploy the hook
     /// @param creationCodeWithArgs The creation code of a hook contract, with encoded constructor arguments appended. Example: `abi.encodePacked(type(Counter).creationCode, abi.encode(constructorArg1, constructorArg2))`
-    function computeAddress(address deployer, uint256 salt, bytes memory creationCodeWithArgs)
-        internal
-        pure
-        returns (address hookAddress)
-    {
-        return address(
-            uint160(uint256(keccak256(abi.encodePacked(bytes1(0xFF), deployer, salt, keccak256(creationCodeWithArgs)))))
-        );
+    function computeAddress(address deployer, uint256 salt, bytes memory creationCodeWithArgs) internal pure returns (address hookAddress) {
+        return address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xFF), deployer, salt, keccak256(creationCodeWithArgs))))));
     }
 }

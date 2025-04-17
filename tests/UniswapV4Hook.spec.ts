@@ -4,8 +4,8 @@ import {makeSuite, TestEnv} from "./helpers/make-suite";
 import {deployContract} from "../shared/fixtures";
 import {ZeroILSwapSamePoolHookMock, UniswapV4HookFactory, PoolManagerMock, ERC20Mock, PoolModifierMock} from "../typechain";
 import {expect} from "chai";
-import { addressAIsGreater, getQ96Percentage } from "./uniswap-utils";
-import { BigNumberish } from "ethers";
+import {addressAIsGreater, getQ96Percentage} from "./uniswap-utils";
+import {BigNumberish} from "ethers";
 
 let mainSnap: any;
 
@@ -23,17 +23,16 @@ const HOOK_PERMISSIONS = {
     beforeSwapReturnDelta: false,
     afterSwapReturnDelta: false,
     afterAddLiquidityReturnDelta: false,
-    afterRemoveLiquidityReturnDelta: false
-}
+    afterRemoveLiquidityReturnDelta: false,
+};
 
-
-const ONE_TOKEN = ethers.parseEther("1")
+const ONE_TOKEN = ethers.parseEther("1");
 
 export default async function suite() {
     makeSuite("UniswapV4", (testEnv: TestEnv) => {
         let deployer: SignerWithAddress;
         let users: SignerWithAddress[];
-        
+
         let PoolManager: PoolManagerMock;
         let PoolModifier: PoolModifierMock;
 
@@ -42,27 +41,27 @@ export default async function suite() {
 
         let ZeroILHook: ZeroILSwapSamePoolHookMock;
         let UniswapV4Hook: UniswapV4HookFactory;
-        
+
         let token_A: ERC20Mock;
         let token_B: ERC20Mock;
-        
+
         const SQRT_RATIO_1_1 = "79228162514264337593543950336";
 
         let PoolConfig;
         let PoolKey;
         let PoolId: string;
-        
+
         let snap: string;
 
         let zeroILHookAddress: string;
-        
+
         before(async () => {
             deployer = (await hre.ethers.getSigners())[0];
-            
+
             users = testEnv.users;
-            
-            token_A = await deployContract("ERC20Mock", [], deployer) as ERC20Mock;
-            token_B = await deployContract("ERC20Mock", [], deployer) as ERC20Mock;
+
+            token_A = (await deployContract("ERC20Mock", [], deployer)) as ERC20Mock;
+            token_B = (await deployContract("ERC20Mock", [], deployer)) as ERC20Mock;
 
             if (addressAIsGreater(await token_A.getAddress(), await token_B.getAddress())) {
                 [token_A, token_B] = [token_B, token_A];
@@ -71,7 +70,7 @@ export default async function suite() {
             token_A.mint(ethers.parseEther("10000000"));
             token_B.mint(ethers.parseEther("10000000"));
 
-            for(let i = 0; i < users.length; i++) {
+            for (let i = 0; i < users.length; i++) {
                 token_A.connect(users[i]).mint(ethers.parseEther("100000"));
                 token_B.connect(users[i]).mint(ethers.parseEther("100000"));
             }
@@ -82,17 +81,17 @@ export default async function suite() {
 
             let hookBytecode = (await ethers.getContractFactory("ZeroILSwapSamePoolHookMock")).bytecode;
             const hookArgs = ethers.AbiCoder.defaultAbiCoder().encode(["address", "string"], [await PoolManager.getAddress(), "uniswapHook"]);
-            
+
             let salt = 0;
             let found;
             let computedAddress;
-            
+
             do {
-                salt +=1;
+                salt += 1;
                 computedAddress = await UniswapV4Hook.computeAddress(hookBytecode, hookArgs, ethers.zeroPadValue(ethers.toBeHex(salt), 32));
                 found = await UniswapV4Hook.verifyHookAddressPermissions(computedAddress, HOOK_PERMISSIONS);
-            }  while(!found && salt < 1000);
-            if(!found) {
+            } while (!found && salt < 1000);
+            if (!found) {
                 console.error("Could not find correct salt. Deployment failed.");
             }
 
@@ -100,46 +99,46 @@ export default async function suite() {
             const deploySalt = await HookMinerMock.getSalt(await PoolManager.getAddress(), await UniswapV4Hook.getAddress());
 
             zeroILHookAddress = await UniswapV4Hook.deploy.staticCall(hookBytecode, hookArgs, deploySalt);
-            
+
             await UniswapV4Hook.deploy(hookBytecode, hookArgs, deploySalt);
-            
-            ZeroILHook = await ethers.getContractAt("ZeroILSwapSamePoolHookMock", zeroILHookAddress) as ZeroILSwapSamePoolHookMock;
-            
+
+            ZeroILHook = (await ethers.getContractAt("ZeroILSwapSamePoolHookMock", zeroILHookAddress)) as ZeroILSwapSamePoolHookMock;
+
             PoolKey = {
                 currency0: await token_A.getAddress(),
                 currency1: await token_B.getAddress(),
                 fee: 0,
                 tickSpacing: 10,
-                hooks: zeroILHookAddress
+                hooks: zeroILHookAddress,
             };
-            
+
             PoolConfig = {
                 desiredPositionRangeTickLower: -100,
                 desiredPositionRangeTickUpper: 100,
                 shiftPositionLowerTickDistance: -50,
                 shiftPositionUpperTickDistance: 50,
                 il0percentageToSwapX96: getQ96Percentage(1),
-                il1percentageToSwapX96: getQ96Percentage(1)
+                il1percentageToSwapX96: getQ96Percentage(1),
             };
-            
+
             await ZeroILHook.setConfig(PoolKey, PoolConfig);
-            
+
             PoolId = await ZeroILHook.getPoolId(PoolKey);
 
             await PoolManager.initialize(PoolKey, SQRT_RATIO_1_1);
 
             await token_A.approve(await PoolModifier.getAddress(), ONE_TOKEN * ethers.toBigInt("1000"));
             await token_B.approve(await PoolModifier.getAddress(), ONE_TOKEN * ethers.toBigInt("1000"));
-            
+
             const initialLiquidity = {
                 tickLower: -100,
                 tickUpper: 100,
                 liquidityDelta: ONE_TOKEN * ethers.toBigInt("200000"),
-                salt: "0x00"
+                salt: "0x00",
             };
 
             await PoolModifier.modifyPosition(PoolKey, initialLiquidity, "0x00");
-            
+
             initialLiquidityCurrency0 = await token_A.balanceOf(await PoolManager.getAddress());
             initialLiquidityCurrency1 = await token_B.balanceOf(await PoolManager.getAddress());
 
@@ -164,8 +163,12 @@ export default async function suite() {
 
                 await ZeroILHook.connect(users[0]).addLiquidity(PoolId, ONE_TOKEN * ethers.toBigInt("1000"), ONE_TOKEN * ethers.toBigInt("1000"));
 
-                expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.equal(ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt(ONE_TOKEN) * ethers.toBigInt("1000"));
-                expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.equal(ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN) * ethers.toBigInt("1000"));
+                expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.equal(
+                    ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt(ONE_TOKEN) * ethers.toBigInt("1000")
+                );
+                expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.equal(
+                    ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN) * ethers.toBigInt("1000")
+                );
             });
 
             it("Should Add Liquidity of A & B by 5 users", async () => {
@@ -175,8 +178,12 @@ export default async function suite() {
 
                     await ZeroILHook.connect(users[0]).addLiquidity(PoolId, ONE_TOKEN * ethers.toBigInt("1000"), ONE_TOKEN * ethers.toBigInt("1000"));
 
-                    expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.equal(ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt(`${i + 1}000`)));
-                    expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.equal(ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt(`${i + 1}000`)));
+                    expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.equal(
+                        ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt(`${i + 1}000`))
+                    );
+                    expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.equal(
+                        ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt(`${i + 1}000`))
+                    );
                 }
             });
 
@@ -186,8 +193,12 @@ export default async function suite() {
 
                 await ZeroILHook.connect(users[0]).addLiquidity(PoolId, ONE_TOKEN * ethers.toBigInt("1000"), ONE_TOKEN * ethers.toBigInt("1000"));
 
-                expect(await token_A.balanceOf(await PoolManager.getAddress())).equal(ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("1000")));
-                expect(await token_B.balanceOf(await PoolManager.getAddress())).equal(ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("1000")));
+                expect(await token_A.balanceOf(await PoolManager.getAddress())).equal(
+                    ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("1000"))
+                );
+                expect(await token_B.balanceOf(await PoolManager.getAddress())).equal(
+                    ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("1000"))
+                );
 
                 await ZeroILHook.connect(users[0]).withdrawLiquidity(PoolId, ONE_TOKEN * ethers.toBigInt("200000"));
 
@@ -204,15 +215,16 @@ export default async function suite() {
 
                 await ZeroILHook.connect(users[0]).addLiquidity(PoolId, ONE_TOKEN * ethers.toBigInt("1000"), ONE_TOKEN * ethers.toBigInt("1000"));
 
-                expect(await token_A.balanceOf(await PoolManager.getAddress())).equal(ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("1000")));
-                expect(await token_B.balanceOf(await PoolManager.getAddress())).equal(ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("1000")));
+                expect(await token_A.balanceOf(await PoolManager.getAddress())).equal(
+                    ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("1000"))
+                );
+                expect(await token_B.balanceOf(await PoolManager.getAddress())).equal(
+                    ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("1000"))
+                );
 
                 const ZERO_FOR_ONE = true;
 
-                const TEST_SETTINGS = [
-                    true,
-                    true
-                ]
+                const TEST_SETTINGS = [true, true];
 
                 const SWAP_DATA = ethers.AbiCoder.defaultAbiCoder().encode(["int24", "int24", "int24"], [10, -100, 100]);
 
@@ -220,9 +232,12 @@ export default async function suite() {
 
                 await ZeroILHook.connect(users[0]).swap(PoolKey, ZERO_FOR_ONE, ONE_TOKEN * ethers.toBigInt("1000"), HOOK_DATA);
 
-                expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.equal(ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("2000")));
-                expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.equal(ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt("2490595409128807800"));
-
+                expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.equal(
+                    ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("2000"))
+                );
+                expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.equal(
+                    ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt("2490595409128807800")
+                );
             });
 
             it("Should swap token B to A", async () => {
@@ -231,15 +246,16 @@ export default async function suite() {
 
                 await ZeroILHook.connect(users[0]).addLiquidity(PoolId, ONE_TOKEN * ethers.toBigInt("1000"), ONE_TOKEN * ethers.toBigInt("1000"));
 
-                expect(await token_A.balanceOf(await PoolManager.getAddress())).equal(ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("1000")));
-                expect(await token_B.balanceOf(await PoolManager.getAddress())).equal(ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("1000")));
+                expect(await token_A.balanceOf(await PoolManager.getAddress())).equal(
+                    ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("1000"))
+                );
+                expect(await token_B.balanceOf(await PoolManager.getAddress())).equal(
+                    ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("1000"))
+                );
 
                 const ZERO_FOR_ONE = false;
 
-                const TEST_SETTINGS = [
-                    true,
-                    true
-                ]
+                const TEST_SETTINGS = [true, true];
 
                 const SWAP_DATA = ethers.AbiCoder.defaultAbiCoder().encode(["int24", "int24", "int24"], [10, -100, 100]);
 
@@ -247,9 +263,12 @@ export default async function suite() {
 
                 await ZeroILHook.connect(users[0]).swap(PoolKey, ZERO_FOR_ONE, ONE_TOKEN * ethers.toBigInt("1000"), HOOK_DATA);
 
-                expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.equal(ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("2000")));
-                expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.equal(ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt("2490595409128807800"));
-
+                expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.equal(
+                    ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN * ethers.toBigInt("2000"))
+                );
+                expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.equal(
+                    ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt("2490595409128807800")
+                );
             });
         });
     });

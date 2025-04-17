@@ -27,7 +27,7 @@ contract PoolModifierMock is PoolTestBase {
         IPoolManager.ModifyLiquidityParams memory params,
         bytes memory hookData
     ) external payable returns (BalanceDelta delta) {
-        (delta,) = manager.modifyLiquidity(key, params, hookData);
+        (delta, ) = manager.modifyLiquidity(key, params, hookData);
 
         uint256 ethBalance = address(this).balance;
         if (ethBalance > 0 && CurrencyLibrary.isAddressZero(key.currency0)) {
@@ -40,7 +40,7 @@ contract PoolModifierMock is PoolTestBase {
 
         CallbackData memory data = abi.decode(rawData, (CallbackData));
 
-        (BalanceDelta delta,) = manager.modifyLiquidity(data.key, data.params, data.hookData);
+        (BalanceDelta delta, ) = manager.modifyLiquidity(data.key, data.params, data.hookData);
 
         (, , , int256 delta0) = _fetchBalances(data.key.currency0, data.sender);
         (, , , int256 delta1) = _fetchBalances(data.key.currency1, data.sender);
