@@ -1,4 +1,5 @@
 import * as dotenv from "dotenv";
+import "@nomicfoundation/hardhat-toolbox";
 import { HardhatUserConfig } from "hardhat/config";
 import "hardhat-gas-reporter";
 import "hardhat-contract-sizer";
@@ -21,6 +22,16 @@ const config: HardhatUserConfig = {
           evmVersion: `cancun`,
         },
       },
+      {
+        version: "0.8.26",
+        settings: {
+          optimizer: {
+            enabled: true,
+          },
+          viaIR: true,
+          evmVersion: `cancun`,
+        },
+      }
     ],
   },
   networks,

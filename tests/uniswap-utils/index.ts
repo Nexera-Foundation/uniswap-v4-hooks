@@ -1,16 +1,16 @@
-import { BigNumber, BigNumberish } from "ethers";
+import {BigNumberish, toBigInt} from "ethers";
 
-export function sqrtPriceToPrice(sqrtPriceX96: BigNumber, token0Decimals: BigNumber, token1Decimals: BigNumber) {
-    let mathPrice = sqrtPriceX96.pow(2).div(BigNumber.from(2).pow(192));
-    const decimalAdjustment = BigNumber.from(10).pow(token0Decimals.sub(token1Decimals));
-    const price = mathPrice.mul(decimalAdjustment);
+export function sqrtPriceToPrice(sqrtPriceX96: BigNumberish, token0Decimals: BigNumberish, token1Decimals: BigNumberish): bigint {
+    let mathPrice = toBigInt(sqrtPriceX96) ** toBigInt(2) / toBigInt(2) ** toBigInt(192);
+    const decimalAdjustment = toBigInt(10) ** (toBigInt(token0Decimals) - toBigInt(token1Decimals));
+    const price = mathPrice * decimalAdjustment;
     return price;
 };
 
-export function getQ96Percentage(percentageDesired: BigNumberish): BigNumber {
-    return (BigNumber.from("1208925819614629174706176").mul(percentageDesired).div("100")).mul(BigNumber.from("2").pow("16"));
+export function getQ96Percentage(percentageDesired: BigNumberish): bigint {
+    return (toBigInt("1208925819614629174706176") * toBigInt(percentageDesired) / toBigInt("100")) * (toBigInt("2") ** toBigInt("16"));
 }
 
 export function addressAIsGreater(addressA: string, addressB: string): boolean {
-    return BigNumber.from(addressA).gt(BigNumber.from(addressB));
+    return toBigInt(addressA) > toBigInt(addressB);
 }
