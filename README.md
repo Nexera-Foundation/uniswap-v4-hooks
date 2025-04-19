@@ -455,8 +455,8 @@ For assistance, questions, or to report issues related to these hooks:
 To learn more about the Nexera Foundation:
 
 *   **Website:** [https://nexera.network/](https://nexera.network/)
-*   **Discord:** <!-- Add Official Discord Invite Link Here -->
-*   **Twitter / X:** [[https://nexera.network/](https://x.com/Nexera_Official)]
+*   **Discord:** [https://discord.com/invite/fB4tkF52H5](https://discord.com/invite/fB4tkF52H5)
+*   **Twitter / X:** [https://nexera.network/](https://x.com/Nexera_Official)
 *   **Contact Email:** [contact@nexera.network](contact@nexera.network)
 
 ---
