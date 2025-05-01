@@ -815,15 +815,18 @@
   dependencies:
     "@types/node" "*"
 
-"@uniswap/v4-core@^1.0.1":
+"@uniswap/v4-core@https://github.com/Uniswap/v4-core#a7cf038":
   version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@uniswap/v4-core/-/v4-core-1.0.1.tgz#d7bf898306a8ab3a89756a54191b38b6af180440"
-  integrity sha512-+UITeH0s/EXJ698nKFoWX6ZW2dOnIDjhUI3AJ0Hg3v+w/Sy4JIDsgmsQSeNu1FAEc72xm4muKY6YuXu9bR2X4Q==
+  resolved "https://github.com/Uniswap/v4-core#a7cf038cd568801a79a9b4cf92cd5b52c95c8585"
 
 "@uniswap/v4-periphery@^1.0.1":
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/@uniswap/v4-periphery/-/v4-periphery-1.0.1.tgz#cbd2a799dce5dc7c545a408c3d48d5dcd5893b4b"
   integrity sha512-/ZLz7mCLL0eTo1M0h/Lc180OYMmpUEGb0yfqZ79nsqVdZCFp0TLQstLZ/zC+ofF7SrMoeGb57p+T8hbe6MXwNw==
+
+"@uniswap/v4-periphery@https://github.com/Uniswap/v4-periphery#444c526":
+  version "1.0.1"
+  resolved "https://github.com/Uniswap/v4-periphery#444c526b77d804590f0d7bc5a481af5a3277c952"
 
 abbrev@1:
   version "1.1.1"

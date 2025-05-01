@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
@@ -35,7 +36,7 @@ contract ZeroILSwapSamePoolHook is ZeroILHook {
     function _swap(PoolKey memory poolKey, bool zeroForOne, int256 amountSpecified, bytes memory hookData) internal returns (BalanceDelta swapDelta) {
         swapDelta = poolManager.swap(
             poolKey,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: zeroForOne,
                 amountSpecified: amountSpecified,
                 sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
