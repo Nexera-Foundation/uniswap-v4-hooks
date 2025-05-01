@@ -48,8 +48,8 @@
     "dependencies": {
         "@openzeppelin/contracts": "^5.2.0",
         "@openzeppelin/contracts-upgradeable": "^5.2.0",
-        "@uniswap/v4-core": "^1.0.1",
-        "@uniswap/v4-periphery": "^1.0.1"
+        "@uniswap/v4-core": "https://github.com/Uniswap/v4-core#a7cf038",
+        "@uniswap/v4-periphery": "https://github.com/Uniswap/v4-periphery#444c526"
     },
     "packageManager": "yarn@1.22.22"
 }

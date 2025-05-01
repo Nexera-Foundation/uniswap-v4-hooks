@@ -12,6 +12,7 @@ import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
 import {BalanceDelta, toBalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {ModifyLiquidityParams, SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {FixedPoint96} from "@uniswap/v4-core/src/libraries/FixedPoint96.sol";
 import {TransientStateLibrary} from "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
@@ -162,7 +163,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
     function _afterSwap(
         address /*sender*/,
         PoolKey calldata key,
-        IPoolManager.SwapParams calldata /*params*/,
+        SwapParams calldata /*params*/,
         BalanceDelta /*delta*/,
         bytes calldata /*hookData*/
     ) internal override returns (bytes4, int128) {
@@ -299,7 +300,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
         // TODO Find out if we need to use fees delta returned by `modifyLiquidity()`
         (BalanceDelta delta, ) = poolManager.modifyLiquidity(
             key,
-            IPoolManager.ModifyLiquidityParams({
+            ModifyLiquidityParams({
                 tickLower: pd.currentPosition.lower,
                 tickUpper: pd.currentPosition.upper,
                 liquidityDelta: liquidityPositionDelta.toInt256(),
@@ -338,7 +339,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
         // TODO find out if we need to use fees delta returned by `modifyLiquidity()`
         (BalanceDelta delta, ) = poolManager.modifyLiquidity(
             key,
-            IPoolManager.ModifyLiquidityParams({
+            ModifyLiquidityParams({
                 tickLower: pd.currentPosition.lower,
                 tickUpper: pd.currentPosition.upper,
                 liquidityDelta: -(liquidityPositionDelta.toInt256()),
@@ -384,7 +385,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
         // Withdraw liquidity from current position
         poolManager.modifyLiquidity(
             key,
-            IPoolManager.ModifyLiquidityParams({
+            ModifyLiquidityParams({
                 tickLower: pd.currentPosition.lower,
                 tickUpper: pd.currentPosition.upper,
                 liquidityDelta: -(positionLiquidity.toInt256()),
@@ -396,7 +397,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
         // Add liquidity to new position
         poolManager.modifyLiquidity(
             key,
-            IPoolManager.ModifyLiquidityParams({
+            ModifyLiquidityParams({
                 tickLower: newPositionTickLower,
                 tickUpper: newPositionTickUpper,
                 liquidityDelta: positionLiquidity.toInt256(),
@@ -422,7 +423,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
             // So we need to remove liquidity and swap it
             poolManager.modifyLiquidity(
                 key,
-                IPoolManager.ModifyLiquidityParams({
+                ModifyLiquidityParams({
                     tickLower: pd.currentPosition.lower,
                     tickUpper: pd.currentPosition.upper,
                     liquidityDelta: -(liquidityToSwap.toInt256()),
@@ -442,7 +443,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
                 // BeforeSwap we need to remove liquidity from position
                 poolManager.modifyLiquidity(
                     key,
-                    IPoolManager.ModifyLiquidityParams({
+                    ModifyLiquidityParams({
                         tickLower: pd.currentPosition.lower,
                         tickUpper: pd.currentPosition.upper,
                         liquidityDelta: -(liquidityToRemove.toInt256()),
@@ -457,7 +458,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
             //We also need to return liquidity we had before swap to our position
             poolManager.modifyLiquidity(
                 key,
-                IPoolManager.ModifyLiquidityParams({
+                ModifyLiquidityParams({
                     tickLower: pd.currentPosition.lower,
                     tickUpper: pd.currentPosition.upper,
                     liquidityDelta: liquidityInReserve.toInt256(),
