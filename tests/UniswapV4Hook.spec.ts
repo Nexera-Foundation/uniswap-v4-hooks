@@ -34,7 +34,6 @@ export default async function suite() {
         let users: SignerWithAddress[];
 
         let PoolManager: PoolManagerMock;
-        let PoolModifier: PoolModifierMock;
 
         let initialLiquidityCurrency0: BigNumberish;
         let initialLiquidityCurrency1: BigNumberish;
@@ -77,7 +76,6 @@ export default async function suite() {
             // Deploy and get contracts
             PoolManager = (await deployContract("PoolManagerMock", [deployer.address], deployer)) as PoolManagerMock;
             UniswapV4Hook = (await deployContract("UniswapV4HookFactory", [], deployer)) as UniswapV4HookFactory;
-            PoolModifier = (await deployContract("PoolModifierMock", [await PoolManager.getAddress()], deployer)) as PoolModifierMock;
 
             let hookBytecode = (await ethers.getContractFactory("ZeroILSwapSamePoolHookMock")).bytecode;
             const hookArgs = ethers.AbiCoder.defaultAbiCoder().encode(["address", "string"], [await PoolManager.getAddress(), "uniswapHook"]);
@@ -95,7 +93,7 @@ export default async function suite() {
                 console.error("Could not find correct salt. Deployment failed.");
             }
 
-            const HookMinerMock = await deployContract("HookMinerMock", [], deployer);
+            const HookMinerMock = await deployContract("HookMinerMock", [], deployer) as HookMinerMock;
             const deploySalt = await HookMinerMock.getSalt(await PoolManager.getAddress(), await UniswapV4Hook.getAddress());
 
             zeroILHookAddress = await UniswapV4Hook.deploy.staticCall(hookBytecode, hookArgs, deploySalt);
@@ -127,8 +125,8 @@ export default async function suite() {
 
             await PoolManager.initialize(PoolKey, SQRT_RATIO_1_1);
 
-            await token_A.approve(await PoolModifier.getAddress(), ONE_TOKEN * ethers.toBigInt("1000"));
-            await token_B.approve(await PoolModifier.getAddress(), ONE_TOKEN * ethers.toBigInt("1000"));
+            await token_A.approve(await PoolManager.getAddress(), ONE_TOKEN * ethers.toBigInt("1000"));
+            await token_B.approve(await PoolManager.getAddress(), ONE_TOKEN * ethers.toBigInt("1000"));
 
             const initialLiquidity = {
                 tickLower: -100,
@@ -137,7 +135,11 @@ export default async function suite() {
                 salt: "0x00",
             };
 
-            await PoolModifier.modifyPosition(PoolKey, initialLiquidity, "0x00");
+            await PoolManager.modifyLiquidity(
+                PoolKey,
+                initialLiquidity,
+                "0x00"
+            )
 
             initialLiquidityCurrency0 = await token_A.balanceOf(await PoolManager.getAddress());
             initialLiquidityCurrency1 = await token_B.balanceOf(await PoolManager.getAddress());

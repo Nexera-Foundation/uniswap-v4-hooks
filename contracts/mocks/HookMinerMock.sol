@@ -5,7 +5,7 @@ import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {HookMiner} from "./HookMiner.sol";
 import {ZeroILSwapSamePoolHookMock} from "./ZeroILSwapSamePoolHookMock.sol";
 
-/// @notice Mines the address and deploys the PointsHook.sol Hook contract
+/// @notice Mines the address of the Hook contract
 contract HookMinerMock {
     function getSalt(address poolManager, address hookFactory) public returns (bytes32) {
         // hook contracts must have specific flags encoded in the address
