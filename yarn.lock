@@ -429,6 +429,11 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
+"@layerzerolabs/lz-evm-messagelib-v2@^3.0.98":
+  version "3.0.98"
+  resolved "https://registry.yarnpkg.com/@layerzerolabs/lz-evm-messagelib-v2/-/lz-evm-messagelib-v2-3.0.98.tgz#f9cd865332ee15aa5b18db80dff971c242d6e6a4"
+  integrity sha512-6iFSel+uToa55C6OaIKobdoeYKf9BhII261+uo9vV3a/n+JgKLLDt9swmUvg6JjrUcTuqeajXjoeEdxbLWjW+g==
+
 "@layerzerolabs/lz-evm-protocol-v2@^3.0.97":
   version "3.0.97"
   resolved "https://registry.yarnpkg.com/@layerzerolabs/lz-evm-protocol-v2/-/lz-evm-protocol-v2-3.0.97.tgz#9269f66f59de6667bd7cad14de707ff1bb5dcc3b"
@@ -3593,6 +3598,11 @@ solhint@^5.0.5:
     text-table "^0.2.0"
   optionalDependencies:
     prettier "^2.8.3"
+
+solidity-bytes-utils@^0.8.4:
+  version "0.8.4"
+  resolved "https://registry.yarnpkg.com/solidity-bytes-utils/-/solidity-bytes-utils-0.8.4.tgz#646588b7031153770350f982665b8c9033f7dc26"
+  integrity sha512-/bjac5YR12i0plOKvGlhE51F5IWGP6rI8DJetCQlXcnwKWz/Hgf/vr+Qlk1BWz56xVcwVhmhCaDkTMnx5xvt0g==
 
 solidity-coverage@^0.8.0:
   version "0.8.15"

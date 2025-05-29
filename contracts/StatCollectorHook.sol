@@ -70,7 +70,7 @@ abstract contract StatCollectorHook is BaseHook {
         bytes calldata
     ) internal override onlyManagedPool(pk) returns (bytes4, BalanceDelta) {
         require(change.liquidityDelta > 0, WrongLiquidityDeltaSign(true, change.liquidityDelta));
-        (uint160 currentSqrtPriceX96, /*int24 tick*/, /*uint24 protocolFee*/, /*uint24 lpFee*/) = poolManager.getSlot0(poolId);
+        (uint160 currentSqrtPriceX96, /*int24 tick*/, /*uint24 protocolFee*/, /*uint24 lpFee*/) = poolManager.getSlot0(managedPoolId);
         (uint256 amount0, uint256 amount1) = LiquidityAmountsExtra.getAmountsForLiquidity(
             currentSqrtPriceX96,
             TickMath.getSqrtPriceAtTick(change.tickLower),
@@ -96,7 +96,7 @@ abstract contract StatCollectorHook is BaseHook {
         }
 
         require(change.liquidityDelta < 0, WrongLiquidityDeltaSign(false, change.liquidityDelta));
-        (uint160 currentSqrtPriceX96, /*int24 tick*/, /*uint24 protocolFee*/, /*uint24 lpFee*/) = poolManager.getSlot0(poolId);
+        (uint160 currentSqrtPriceX96, /*int24 tick*/, /*uint24 protocolFee*/, /*uint24 lpFee*/) = poolManager.getSlot0(managedPoolId);
         (uint256 amount0, uint256 amount1) = LiquidityAmountsExtra.getAmountsForLiquidity(
             currentSqrtPriceX96,
             TickMath.getSqrtPriceAtTick(change.tickLower),

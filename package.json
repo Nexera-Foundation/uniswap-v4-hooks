@@ -36,12 +36,14 @@
         "typescript": ">=4.5.0"
     },
     "dependencies": {
+        "@layerzerolabs/lz-evm-messagelib-v2": "^3.0.98",
         "@layerzerolabs/lz-evm-protocol-v2": "^3.0.97",
         "@layerzerolabs/oapp-evm": "^0.3.2",
         "@openzeppelin/contracts": "^5.2.0",
         "@openzeppelin/contracts-upgradeable": "^5.2.0",
         "@uniswap/v4-core": "https://github.com/Uniswap/v4-core#a7cf038",
-        "@uniswap/v4-periphery": "https://github.com/Uniswap/v4-periphery#444c526"
+        "@uniswap/v4-periphery": "https://github.com/Uniswap/v4-periphery#444c526",
+        "solidity-bytes-utils": "^0.8.4"
     },
     "packageManager": "yarn@1.22.22"
 }
