@@ -36,6 +36,8 @@
         "typescript": ">=4.5.0"
     },
     "dependencies": {
+        "@layerzerolabs/lz-evm-protocol-v2": "^3.0.97",
+        "@layerzerolabs/oapp-evm": "^0.3.2",
         "@openzeppelin/contracts": "^5.2.0",
         "@openzeppelin/contracts-upgradeable": "^5.2.0",
         "@uniswap/v4-core": "https://github.com/Uniswap/v4-core#a7cf038",
