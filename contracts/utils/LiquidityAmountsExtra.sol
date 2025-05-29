@@ -8,6 +8,7 @@ import {SafeCast} from "@uniswap/v4-core/src/libraries/SafeCast.sol";
 /**
  * @title Liquidity amount functions available in v3-periphery package but removed in v4-periphery
  * Based on https://github.com/Uniswap/v3-periphery/blob/v1.3.0/contracts/libraries/LiquidityAmounts.sol
+ * Also: https://github.com/Uniswap/v4-core/blob/main/test/utils/LiquidityAmounts.sol
  */
 library LiquidityAmountsExtra {
     using SafeCast for uint256;
