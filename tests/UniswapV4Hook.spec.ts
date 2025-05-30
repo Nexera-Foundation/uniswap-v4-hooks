@@ -94,9 +94,9 @@ export default async function suite() {
                 console.error("Could not find correct salt. Deployment failed.");
             }
 
-            const zeroILHookAddress = await UniswapV4Hook.callStatic.deploy(hookBytecode, hookArgs, ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32));
+            const zeroILHookAddress = await UniswapV4Hook.callStatic.deployOwnable(hookBytecode, hookArgs, ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32));
             
-            await UniswapV4Hook.deploy(hookBytecode, hookArgs, ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32));
+            await UniswapV4Hook.deployOwnable(hookBytecode, hookArgs, ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32));
             
             ZeroILHook = await ethers.getContractAt("ZeroILSwapSamePoolHookMock", zeroILHookAddress) as ZeroILSwapSamePoolHookMock;
             
