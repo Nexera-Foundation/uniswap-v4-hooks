@@ -6,7 +6,6 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
-import "./ZeroILSwapSamePoolHook.sol";
 
 /**
  * @title Factory for deterministic deployment of Uniswap v4 Hooks
@@ -28,11 +27,23 @@ contract UniswapV4HookFactory is Ownable {
      * @return address of deployed Hook
      * @dev If Hook extends BaseHook, its constructor verifies the address to follow rules
      */
-    function deploy(bytes calldata hookBytecode, bytes calldata hookConstructorArguments, bytes32 salt) external onlyOwner returns (address) {
+    function deploy(bytes calldata hookBytecode, bytes calldata hookConstructorArguments, bytes32 salt) public onlyOwner returns (address) {
         bytes memory deployBytecode = _computeBytecode(hookBytecode, hookConstructorArguments);
         address deployed = Create2.deploy(0, salt, deployBytecode);
-        ZeroILSwapSamePoolHook(deployed).transferOwnership(msg.sender);
         emit Deployed(deployed);
+        return deployed;
+    }
+
+    /**
+     * @notice Deploy a Hook with constructor arguments & transfer ownership
+     * @param hookConstructorArguments abi-encoded arguments to the Hook constructor
+     * @param salt This param should be calculated so that the deployed Hook address is correct (see `Hooks.validateHookAddress()` in `@uniswap/v4-core/contracts/libraries/Hooks.sol`)
+     * @return address of deployed Hook
+     * @dev If Hook extends BaseHook, its constructor verifies the address to follow rules
+     */
+    function deployOwnable(bytes calldata hookBytecode, bytes calldata hookConstructorArguments, bytes32 salt) public onlyOwner returns (address) {
+        address deployed = deploy(hookBytecode, hookConstructorArguments, salt);
+        Ownable(deployed).transferOwnership(msg.sender);
         return deployed;
     }
 
