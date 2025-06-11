@@ -5,6 +5,8 @@ import "hardhat-gas-reporter";
 import "hardhat-contract-sizer";
 import "@typechain/hardhat";
 
+import "./scripts/findHookSalt";
+
 dotenv.config();
 
 import networks from "./hardhat.networks";
@@ -35,12 +37,6 @@ const config: HardhatUserConfig = {
     ],
   },
   networks,
-  namedAccounts: {
-    deployer: 0,
-    admin: 1,
-    minter: 2,
-    user: 3,
-  },
   etherscan: {
     apiKey: {
       mainnet: process.env.ETHERSCAN_API_KEY || "",
