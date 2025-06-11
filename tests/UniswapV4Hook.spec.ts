@@ -2,7 +2,7 @@ import {SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
 import {ethers} from "hardhat";
 import {makeSuite, TestEnv} from "./helpers/make-suite";
 import {deployContract} from "../shared/fixtures";
-import {ZeroILSwapSamePoolHookMock, UniswapV4HookFactory, PoolManagerMock, ERC20Mock, PoolModifierMock} from "../typechain";
+import {ZeroILSwapSamePoolHookMock, UniswapV4HookFactory, PoolManagerMock, ERC20Mock} from "../typechain";
 import {expect} from "chai";
 import {addressAIsGreater, getQ96Percentage} from "./uniswap-utils";
 
@@ -44,10 +44,14 @@ export default async function suite() {
         const SQRT_RATIO_1_1 = "79228162514264337593543950336";
 
         let PoolConfig;
-        let PoolKey;
+        let PoolKey: {
+            currency0: string;
+            currency1: string;
+            fee: number;
+            tickSpacing: number;
+            hooks: string;
+        };
         let PoolId: string;
-
-        let snap: string;
 
         let zeroILHookAddress: string;
 
@@ -90,7 +94,7 @@ export default async function suite() {
                 console.error("Could not find correct salt. Deployment failed.");
             }
 
-            const HookMinerMock = await deployContract("HookMinerMock", [], deployer) as HookMinerMock;
+            const HookMinerMock = (await deployContract("HookMinerMock", [], deployer)) as HookMinerMock;
             const deploySalt = await HookMinerMock.getSalt(await PoolManager.getAddress(), await UniswapV4Hook.getAddress());
 
             zeroILHookAddress = await UniswapV4Hook.deploy.staticCall(hookBytecode, hookArgs, deploySalt);
@@ -132,11 +136,7 @@ export default async function suite() {
                 salt: "0x00",
             };
 
-            await PoolManager.modifyLiquidity(
-                PoolKey,
-                initialLiquidity,
-                "0x00"
-            )
+            await PoolManager.modifyLiquidity(PoolKey, initialLiquidity, "0x00");
 
             initialLiquidityCurrency0 = await token_A.balanceOf(await PoolManager.getAddress());
             initialLiquidityCurrency1 = await token_B.balanceOf(await PoolManager.getAddress());
@@ -152,9 +152,7 @@ export default async function suite() {
 
                 await ZeroILHook.connect(users[0]).addLiquidity(PoolId, ONE_TOKEN * ethers.toBigInt("1000"), ONE_TOKEN * ethers.toBigInt("1000"));
 
-                expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.equal(
-                    initialLiquidityCurrency0 + ONE_TOKEN * ethers.toBigInt("1000")
-                );
+                expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.equal(initialLiquidityCurrency0 + ONE_TOKEN * ethers.toBigInt("1000"));
                 expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.equal(
                     ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN) * ethers.toBigInt("1000")
                 );
