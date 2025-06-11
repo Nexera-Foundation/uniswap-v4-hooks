@@ -5,9 +5,6 @@ import {deployContract} from "../shared/fixtures";
 import {ZeroILSwapSamePoolHookMock, UniswapV4HookFactory, PoolManagerMock, ERC20Mock, PoolModifierMock} from "../typechain";
 import {expect} from "chai";
 import {addressAIsGreater, getQ96Percentage} from "./uniswap-utils";
-import {BigNumberish} from "ethers";
-
-let mainSnap: any;
 
 const HOOK_PERMISSIONS = {
     beforeInitialize: false,
@@ -26,7 +23,7 @@ const HOOK_PERMISSIONS = {
     afterRemoveLiquidityReturnDelta: false,
 };
 
-const ONE_TOKEN = ethers.parseEther("1");
+const ONE_TOKEN: bigint = ethers.parseEther("1");
 
 export default async function suite() {
     makeSuite("UniswapV4", (testEnv: TestEnv) => {
@@ -35,8 +32,8 @@ export default async function suite() {
 
         let PoolManager: PoolManagerMock;
 
-        let initialLiquidityCurrency0: BigNumberish;
-        let initialLiquidityCurrency1: BigNumberish;
+        let initialLiquidityCurrency0: bigint;
+        let initialLiquidityCurrency1: bigint;
 
         let ZeroILHook: ZeroILSwapSamePoolHookMock;
         let UniswapV4Hook: UniswapV4HookFactory;
@@ -55,7 +52,7 @@ export default async function suite() {
         let zeroILHookAddress: string;
 
         before(async () => {
-            deployer = (await hre.ethers.getSigners())[0];
+            deployer = testEnv.deployer;
 
             users = testEnv.users;
 
@@ -146,16 +143,6 @@ export default async function suite() {
 
             expect(initialLiquidityCurrency0).to.be.equal(ONE_TOKEN * ethers.toBigInt("997") + ethers.toBigInt("454414149819226701"));
             expect(initialLiquidityCurrency1).to.be.equal(ONE_TOKEN * ethers.toBigInt("997") + ethers.toBigInt("454414149819226701"));
-
-            mainSnap = await ethers.provider.send("evm_snapshot", []);
-        });
-
-        beforeEach(async () => {
-            snap = await ethers.provider.send("evm_snapshot", []);
-        });
-
-        afterEach(async function () {
-            await ethers.provider.send("evm_revert", [snap]);
         });
 
         describe("UniswapV4 Tests", async () => {
@@ -166,7 +153,7 @@ export default async function suite() {
                 await ZeroILHook.connect(users[0]).addLiquidity(PoolId, ONE_TOKEN * ethers.toBigInt("1000"), ONE_TOKEN * ethers.toBigInt("1000"));
 
                 expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.equal(
-                    ethers.toBigInt(initialLiquidityCurrency0) + ethers.toBigInt(ONE_TOKEN) * ethers.toBigInt("1000")
+                    initialLiquidityCurrency0 + ONE_TOKEN * ethers.toBigInt("1000")
                 );
                 expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.equal(
                     ethers.toBigInt(initialLiquidityCurrency1) + ethers.toBigInt(ONE_TOKEN) * ethers.toBigInt("1000")
