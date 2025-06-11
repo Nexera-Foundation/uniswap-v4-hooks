@@ -7,7 +7,6 @@ import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ZeroILSwapSamePoolHookMock is ZeroILSwapSamePoolHook {
-
     constructor(IPoolManager _poolManager, string memory _uri) ZeroILSwapSamePoolHook(_poolManager, _uri) {}
 
     /**
