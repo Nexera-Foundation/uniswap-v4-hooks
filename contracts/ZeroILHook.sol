@@ -25,6 +25,7 @@ import {BaseHook} from "@uniswap/v4-periphery/src/utils/BaseHook.sol";
 import {LiquidityAmounts} from "@uniswap/v4-periphery/src/libraries/LiquidityAmounts.sol";
 import {LiquidityAmountsExtra} from "./utils/LiquidityAmountsExtra.sol";
 import {SafeCallback} from "./utils/SafeCallback.sol";
+
 /**
  * - Users can add liquidity
  *   - directly to the Pool
@@ -665,7 +666,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
      * @param pd PoolData of the pool to check
      */
     function _requireValidPool(PoolData storage pd, PoolConfig storage pc) private view {
-        // If pool is not initialized corrency1 will be zero
+        // If pool is not initialized currency1 will be zero
         // currency0 can be zero for initialized pool with NATIVE currency
         if (Currency.unwrap(pd.currency1) == (address(0))) revert InvalidPool();
 

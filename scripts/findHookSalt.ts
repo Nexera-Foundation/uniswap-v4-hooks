@@ -2,6 +2,7 @@ import { task } from "hardhat/config";
 
 task("findHookSalt")
   .addParam("uniswapV4HookFactoryAddress", "The address of the UniswapV4HookFactory contract")
+  .addParam("startId", "The starting index for salt generation")
   .addParam("limit", "The number of salts to check")
   .addParam("hookBytecode", "The bytecode of the hook contract")
   .addVariadicPositionalParam("hookArgs", "The constructor arguments of the hook contract")
@@ -12,8 +13,8 @@ task("findHookSalt")
       taskArgs.uniswapV4HookFactoryAddress
     );
 
-    for (let i = 0; i < Number(taskArgs.limit); i++) {
-        const salt = hre.ethers.keccak256(hre.ethers.solidityPacked(["uint"], [i + 12000]));
+    for (let i = Number(taskArgs.startId); i < Number(taskArgs.limit) + Number(taskArgs.startId); i++) {
+        const salt = hre.ethers.keccak256(hre.ethers.solidityPacked(["uint"], [i]));
 
         const computedAddress = await uniswapV4HookFactory.computeAddress(
             taskArgs.hookBytecode,
