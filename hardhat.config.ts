@@ -1,6 +1,7 @@
 import * as dotenv from "dotenv";
 import "@nomicfoundation/hardhat-toolbox";
 import { HardhatUserConfig } from "hardhat/config";
+import "hardhat-dependency-compiler";
 import "hardhat-gas-reporter";
 import "hardhat-contract-sizer";
 import "@typechain/hardhat";
@@ -60,12 +61,20 @@ const config: HardhatUserConfig = {
     alwaysGenerateOverloads: true,
     outDir: "typechain",
   },
+  mocha: {
+    timeout: 200000,
+  },
   paths: {
     artifacts: "./artifacts",
     cache: "./cache",
     sources: "./contracts",
     tests: "./tests",
   },
+  dependencyCompiler: {
+    paths: [
+      "@uniswap/v4-core/src/test/PoolModifyLiquidityTestNoChecks.sol",
+    ]
+  }
 };
 
 export default config;
