@@ -1,8 +1,8 @@
 import {SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
-import {ethers} from "hardhat";
+import {ethers, run} from "hardhat";
 import {makeSuite, TestEnv} from "./helpers/make-suite";
 import {deployContract} from "../shared/fixtures";
-import {ZeroILSwapSamePoolHookMock, UniswapV4HookFactory, PoolManagerMock, ERC20Mock} from "../typechain";
+import {ZeroILSwapSamePoolHookMock, UniswapV4HookFactory, PoolManagerMock, ERC20Mock, PoolModifyLiquidityTestNoChecks} from "../typechain";
 import {expect} from "chai";
 import {addressAIsGreater, getQ96Percentage} from "./uniswap-utils";
 
@@ -31,6 +31,8 @@ export default async function suite() {
         let users: SignerWithAddress[];
 
         let PoolManager: PoolManagerMock;
+
+        let PoolModifier: PoolModifyLiquidityTestNoChecks;
 
         let initialLiquidityCurrency0: bigint;
         let initialLiquidityCurrency1: bigint;
@@ -77,25 +79,19 @@ export default async function suite() {
             // Deploy and get contracts
             PoolManager = (await deployContract("PoolManagerMock", [deployer.address], deployer)) as PoolManagerMock;
             UniswapV4Hook = (await deployContract("UniswapV4HookFactory", [], deployer)) as UniswapV4HookFactory;
+            PoolModifier = (await deployContract("PoolModifyLiquidityTestNoChecks", [await PoolManager.getAddress()], deployer)) as PoolModifyLiquidityTestNoChecks;
 
             let hookBytecode = (await ethers.getContractFactory("ZeroILSwapSamePoolHookMock")).bytecode;
             const hookArgs = ethers.AbiCoder.defaultAbiCoder().encode(["address", "string"], [await PoolManager.getAddress(), "uniswapHook"]);
 
-            let salt = 0;
-            let found;
-            let computedAddress;
-
-            do {
-                salt += 1;
-                computedAddress = await UniswapV4Hook.computeAddress(hookBytecode, hookArgs, ethers.zeroPadValue(ethers.toBeHex(salt), 32));
-                found = await UniswapV4Hook.verifyHookAddressPermissions(computedAddress, HOOK_PERMISSIONS);
-            } while (!found && salt < 1000);
-            if (!found) {
-                console.error("Could not find correct salt. Deployment failed.");
-            }
-
-            const HookMinerMock = (await deployContract("HookMinerMock", [], deployer)) as HookMinerMock;
-            const deploySalt = await HookMinerMock.getSalt(await PoolManager.getAddress(), await UniswapV4Hook.getAddress());
+            let deploySalt = await run("findHookSalt", {
+                uniswapV4HookFactoryAddress: await UniswapV4Hook.getAddress(),
+                startId: "35000",
+                limit: "20000",
+                hookBytecode: hookBytecode,
+                hookArgs: hookArgs,
+                permissions: JSON.stringify(HOOK_PERMISSIONS),
+            });
 
             zeroILHookAddress = await UniswapV4Hook.deploy.staticCall(hookBytecode, hookArgs, deploySalt);
 
@@ -126,17 +122,17 @@ export default async function suite() {
 
             await PoolManager.initialize(PoolKey, SQRT_RATIO_1_1);
 
-            await token_A.approve(await PoolManager.getAddress(), ONE_TOKEN * ethers.toBigInt("1000"));
-            await token_B.approve(await PoolManager.getAddress(), ONE_TOKEN * ethers.toBigInt("1000"));
+            await token_A.approve(await PoolModifier.getAddress(), ONE_TOKEN * ethers.toBigInt("1000"));
+            await token_B.approve(await PoolModifier.getAddress(), ONE_TOKEN * ethers.toBigInt("1000"));
 
             const initialLiquidity = {
                 tickLower: -100,
                 tickUpper: 100,
                 liquidityDelta: ONE_TOKEN * ethers.toBigInt("200000"),
-                salt: "0x00",
+                salt: ethers.ZeroHash,
             };
 
-            await PoolManager.modifyLiquidity(PoolKey, initialLiquidity, "0x00");
+            await PoolModifier["modifyLiquidity((address,address,uint24,int24,address),(int24,int24,int256,bytes32),bytes)"](PoolKey, initialLiquidity, "0x00");
 
             initialLiquidityCurrency0 = await token_A.balanceOf(await PoolManager.getAddress());
             initialLiquidityCurrency1 = await token_B.balanceOf(await PoolManager.getAddress());
