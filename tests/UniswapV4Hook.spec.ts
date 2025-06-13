@@ -2,7 +2,7 @@ import {SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
 import {ethers, run} from "hardhat";
 import {makeSuite, TestEnv} from "./helpers/make-suite";
 import {deployContract} from "../shared/fixtures";
-import {ZeroILSwapSamePoolHook, UniswapV4HookFactory, PoolManager, ERC20Mock, PoolModifyLiquidityTestNoChecks, PoolSwapTest} from "../typechain";
+import {ZeroILSwapSamePoolHook, UniswapV4HookFactory, PoolManager, ERC20Mock, PoolModifyLiquidityTestNoChecks, PoolSwapTest} from "../typechain-types";
 import {expect} from "chai";
 import {addressAIsGreater, getQ96Percentage} from "./uniswap-utils";
 
