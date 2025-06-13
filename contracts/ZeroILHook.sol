@@ -320,7 +320,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
         }
 
         _settleZeroILReserveAmount(pd);
-        _settleDeltas(key, spender, delta);
+        _settleDeltas(key, spender);
     }
 
     /**
@@ -358,7 +358,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
 
         _settleZeroILReserveAmount(pd);
 
-        _takeDeltas(key, spender, delta);
+        _takeDeltas(key, spender);
     }
 
     function _shiftPositionWhileUnlocked(bytes calldata arguments) internal virtual {
@@ -508,14 +508,18 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
         pd.zeroILPosition = newZeroILPosition;
     }
 
-    function _settleDeltas(PoolKey memory key, address spender, BalanceDelta delta) internal {
-        _settleDelta(spender, key.currency0, uint128(delta.amount0()));
-        _settleDelta(spender, key.currency1, uint128(delta.amount1()));
+    function _settleDeltas(PoolKey memory key, address spender) internal {
+        int256 amount0 = poolManager.currencyDelta(address(this), key.currency0);
+        int256 amount1 = poolManager.currencyDelta(address(this), key.currency1);
+        _settleDelta(spender, key.currency0, uint128(uint256(-amount0)));
+        _settleDelta(spender, key.currency1, uint128(uint256(-amount1)));
     }
 
-    function _takeDeltas(PoolKey memory key, address beneficiary, BalanceDelta delta) internal {
-        poolManager.take(key.currency0, beneficiary, uint256(uint128(-delta.amount0())));
-        poolManager.take(key.currency1, beneficiary, uint256(uint128(-delta.amount1())));
+    function _takeDeltas(PoolKey memory key, address beneficiary) internal {
+        int256 amount0 = poolManager.currencyDelta(address(this), key.currency0);
+        int256 amount1 = poolManager.currencyDelta(address(this), key.currency1);
+        poolManager.take(key.currency0, beneficiary, uint256(amount0));
+        poolManager.take(key.currency1, beneficiary, uint256(amount1));
     }
 
     /**
