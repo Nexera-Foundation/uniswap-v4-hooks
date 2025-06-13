@@ -31,7 +31,7 @@ import {SafeCallback} from "./utils/SafeCallback.sol";
  *   - directly to the Pool
  *   - via the Hook - in this case they receive ERC1155 token issued by the Hook which represents their part of Hook's liquidity and reserves in the Pool
  * - Hook maintains his position in the Pool and some reserves (funds used to compensate IL)
- * - After each swap it verifies the difference between old and new tick (tick represents ratio between Pool assets) to find out if it need to shift it's liquidity position or  not yet (distance required to shift is defined on Hook initialization)
+ * - After each swap it verifies the difference between old and new tick (tick represents ratio between Pool assets) to find out if it need to shift it's liquidity position or not yet (distance required to shift is defined on Hook initialization)
  * - If Position shift required, Hook calculates IL between old and new positions. and decides which currency it needs to buy/sell to compensate IL.
  *    - If Hook has reserves in currency it needs to buy, then it removes some liquidity and swaps it.
  *    - Otherwise (if he has reserves in currency it needs to sell) it just swaps it (or if reserve is not enough - withdraws from the Hook's position what is needed)
@@ -287,7 +287,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
     }
 
     /**
-     * @notice Called py the PoolManager during execution of the `lock()` - see `addLiquidity()`
+     * @notice Called by the PoolManager during execution of the `lock()` - see `addLiquidity()`
      * param poolId Id of the pool
      * param liquidityPositionDelta Amount of liquidity to add to Hook's position
      * param amountToReserve Amount to add to reserve
@@ -324,10 +324,10 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
     }
 
     /**
-     * @notice Called py the PoolManager during execution of the `lock()` - see `addLiquidity()`
+     * @notice Called by the PoolManager during execution of the `lock()` - see `addLiquidity()`
      * param poolId Id of the pool
      * param liquidityPositionDelta Amount of liquidity to remove
-     * param amountFromReserve Amount of reserved tokens to send to sepnder
+     * param amountFromReserve Amount of reserved tokens to send to sender
      * param spender Address of the user who pays Hook tokens for this (who removes liquidity)
      */
     function _withdrawLiquidityWhileUnlocked(bytes calldata arguments) internal virtual {
@@ -547,9 +547,9 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
     }
 
     /**
-     * @notice Returnextra currency to the user
+     * @notice Return extra currency to the user
      * @param pd Data of the pool
-     * @param sender user who initiated the operation
+     * @param sender User who initiated the operation
      */
     function _settleSpenderChange(PoolData storage pd, address sender) internal {
         uint256 balance0 = pd.currency0.balanceOfSelf();
@@ -559,7 +559,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
     }
 
     function _settleClaimsDelta(Currency c) internal {
-        int256 delta = poolManager.currencyDelta(address(this), c); // Delta is postiv when we owe to the pool
+        int256 delta = poolManager.currencyDelta(address(this), c); // Delta is postive when we owe to the pool
         if (delta > 0) {
             poolManager.burn(address(this), c.toId(), uint256(delta));
         } else {
