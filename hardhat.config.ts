@@ -73,6 +73,7 @@ const config: HardhatUserConfig = {
   dependencyCompiler: {
     paths: [
       "@uniswap/v4-core/src/test/PoolModifyLiquidityTestNoChecks.sol",
+      "@uniswap/v4-core/src/test/PoolSwapTest.sol",
     ]
   }
 };
