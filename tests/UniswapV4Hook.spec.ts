@@ -97,7 +97,7 @@ export default async function suite() {
 
             let deploySalt = await run("findHookSalt", {
                 uniswapV4HookFactoryAddress: await UniswapV4Hook.getAddress(),
-                startId: "30000",
+                startId: "17000",
                 limit: "5000",
                 hookBytecode: hookBytecode,
                 hookArgs: hookArgs,
