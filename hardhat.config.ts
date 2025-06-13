@@ -1,8 +1,10 @@
 import * as dotenv from "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
-import "hardhat-gas-reporter";
+import "@nomicfoundation/hardhat-toolbox";
+import "hardhat-dependency-compiler";
 import "hardhat-contract-sizer";
-import "@typechain/hardhat";
+
+import "./scripts/findHookSalt";
 
 dotenv.config();
 
@@ -17,19 +19,21 @@ const config: HardhatUserConfig = {
           optimizer: {
             enabled: true,
           },
-          viaIR: true,
           evmVersion: `cancun`,
         },
       },
+      {
+        version: "0.8.26",
+        settings: {
+          optimizer: {
+            enabled: true,
+          },
+          evmVersion: `cancun`,
+        },
+      }
     ],
   },
   networks,
-  namedAccounts: {
-    deployer: 0,
-    admin: 1,
-    minter: 2,
-    user: 3,
-  },
   etherscan: {
     apiKey: {
       mainnet: process.env.ETHERSCAN_API_KEY || "",
@@ -49,9 +53,8 @@ const config: HardhatUserConfig = {
     forceTerminalOutputFormat: "terminal",
     // uncomment `parallel: true` in mocha config or report will be empty
   },
-  typechain: {
-    alwaysGenerateOverloads: true,
-    outDir: "typechain",
+  mocha: {
+    timeout: 200000,
   },
   paths: {
     artifacts: "./artifacts",
@@ -59,6 +62,13 @@ const config: HardhatUserConfig = {
     sources: "./contracts",
     tests: "./tests",
   },
+  dependencyCompiler: {
+    paths: [
+      "@uniswap/v4-core/src/PoolManager.sol",
+      "@uniswap/v4-core/src/test/PoolModifyLiquidityTestNoChecks.sol",
+      "@uniswap/v4-core/src/test/PoolSwapTest.sol",
+    ]
+  }
 };
 
 export default config;
