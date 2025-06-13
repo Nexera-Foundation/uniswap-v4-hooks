@@ -85,7 +85,11 @@ export default async function suite() {
             // Deploy and get contracts
             PoolManager = (await deployContract("PoolManager", [deployer.address], deployer)) as PoolManager;
             UniswapV4Hook = (await deployContract("UniswapV4HookFactory", [], deployer)) as UniswapV4HookFactory;
-            PoolModifier = (await deployContract("PoolModifyLiquidityTestNoChecks", [await PoolManager.getAddress()], deployer)) as PoolModifyLiquidityTestNoChecks;
+            PoolModifier = (await deployContract(
+                "PoolModifyLiquidityTestNoChecks",
+                [await PoolManager.getAddress()],
+                deployer
+            )) as PoolModifyLiquidityTestNoChecks;
             PoolSwapper = (await deployContract("PoolSwapTest", [await PoolManager.getAddress()], deployer)) as PoolSwapTest;
 
             let hookBytecode = (await ethers.getContractFactory("ZeroILSwapSamePoolHook")).bytecode;
@@ -241,7 +245,7 @@ export default async function suite() {
                     {
                         zeroForOne: ZERO_FOR_ONE,
                         amountSpecified: amountToSwap,
-                        sqrtPriceLimitX96: MIN_SQRT_PRICE + 1
+                        sqrtPriceLimitX96: MIN_SQRT_PRICE + 1,
                     },
                     {
                         takeClaims: TEST_SETTINGS[0],
@@ -250,12 +254,8 @@ export default async function suite() {
                     HOOK_DATA
                 );
 
-                expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.closeTo(
-                    balanceBeforeSwapA + amountToSwap, ethers.parseEther("3")
-                );
-                expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.equal(
-                    balanceBeforeSwapB
-                );
+                expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.closeTo(balanceBeforeSwapA + amountToSwap, ethers.parseEther("3"));
+                expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.equal(balanceBeforeSwapB);
             });
 
             it("Should swap token B to A", async () => {
@@ -292,7 +292,7 @@ export default async function suite() {
                     {
                         zeroForOne: ZERO_FOR_ONE,
                         amountSpecified: amountToSwap,
-                        sqrtPriceLimitX96: ethers.toBigInt(MAX_SQRT_PRICE) - ethers.toBigInt("1")
+                        sqrtPriceLimitX96: ethers.toBigInt(MAX_SQRT_PRICE) - ethers.toBigInt("1"),
                     },
                     {
                         takeClaims: TEST_SETTINGS[0],
@@ -301,12 +301,8 @@ export default async function suite() {
                     HOOK_DATA
                 );
 
-                expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.equal(
-                    balanceBeforeSwapA
-                );
-                expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.closeTo(
-                    balanceBeforeSwapB + amountToSwap, ethers.parseEther("3")
-                );
+                expect(await token_A.balanceOf(await PoolManager.getAddress())).to.be.equal(balanceBeforeSwapA);
+                expect(await token_B.balanceOf(await PoolManager.getAddress())).to.be.closeTo(balanceBeforeSwapB + amountToSwap, ethers.parseEther("3"));
             });
         });
     });
