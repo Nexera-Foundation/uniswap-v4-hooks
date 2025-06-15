@@ -28,7 +28,7 @@ const HOOK_PERMISSIONS = {
 const ONE_TOKEN: bigint = ethers.parseEther("1");
 
 export default async function suite() {
-    makeSuite("UniswapV4", (testEnv: TestEnv) => {
+    makeSuite("ZeroILSwapSamePoolHook", (testEnv: TestEnv) => {
         let deployer: SignerWithAddress;
         let users: SignerWithAddress[];
 
@@ -160,7 +160,7 @@ export default async function suite() {
             await ethers.provider.send("evm_revert", [snap]);
         });
 
-        describe("UniswapV4 Tests", async () => {
+        describe("ZeroILSwapSamePoolHook Tests", async () => {
             it("Should Increase Liquidity of A & B", async () => {
                 await token_A.connect(users[0]).approve(zeroILHookAddress, ONE_TOKEN * ethers.toBigInt("1000"));
                 await token_B.connect(users[0]).approve(zeroILHookAddress, ONE_TOKEN * ethers.toBigInt("1000"));
