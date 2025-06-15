@@ -25,12 +25,13 @@ import {BaseHook} from "@uniswap/v4-periphery/src/utils/BaseHook.sol";
 import {LiquidityAmounts} from "@uniswap/v4-periphery/src/libraries/LiquidityAmounts.sol";
 import {LiquidityAmountsExtra} from "./utils/LiquidityAmountsExtra.sol";
 import {SafeCallback} from "./utils/SafeCallback.sol";
+
 /**
  * - Users can add liquidity
  *   - directly to the Pool
  *   - via the Hook - in this case they receive ERC1155 token issued by the Hook which represents their part of Hook's liquidity and reserves in the Pool
  * - Hook maintains his position in the Pool and some reserves (funds used to compensate IL)
- * - After each swap it verifies the difference between old and new tick (tick represents ratio between Pool assets) to find out if it need to shift it's liquidity position or  not yet (distance required to shift is defined on Hook initialization)
+ * - After each swap it verifies the difference between old and new tick (tick represents ratio between Pool assets) to find out if it need to shift it's liquidity position or not yet (distance required to shift is defined on Hook initialization)
  * - If Position shift required, Hook calculates IL between old and new positions. and decides which currency it needs to buy/sell to compensate IL.
  *    - If Hook has reserves in currency it needs to buy, then it removes some liquidity and swaps it.
  *    - Otherwise (if he has reserves in currency it needs to sell) it just swaps it (or if reserve is not enough - withdraws from the Hook's position what is needed)
@@ -286,7 +287,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
     }
 
     /**
-     * @notice Called py the PoolManager during execution of the `lock()` - see `addLiquidity()`
+     * @notice Called by the PoolManager during execution of the `lock()` - see `addLiquidity()`
      * param poolId Id of the pool
      * param liquidityPositionDelta Amount of liquidity to add to Hook's position
      * param amountToReserve Amount to add to reserve
@@ -319,14 +320,14 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
         }
 
         _settleZeroILReserveAmount(pd);
-        _settleDeltas(key, spender, delta);
+        _settleDeltas(key, spender);
     }
 
     /**
-     * @notice Called py the PoolManager during execution of the `lock()` - see `addLiquidity()`
+     * @notice Called by the PoolManager during execution of the `lock()` - see `addLiquidity()`
      * param poolId Id of the pool
      * param liquidityPositionDelta Amount of liquidity to remove
-     * param amountFromReserve Amount of reserved tokens to send to sepnder
+     * param amountFromReserve Amount of reserved tokens to send to sender
      * param spender Address of the user who pays Hook tokens for this (who removes liquidity)
      */
     function _withdrawLiquidityWhileUnlocked(bytes calldata arguments) internal virtual {
@@ -357,7 +358,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
 
         _settleZeroILReserveAmount(pd);
 
-        _takeDeltas(key, spender, delta);
+        _takeDeltas(key, spender);
     }
 
     function _shiftPositionWhileUnlocked(bytes calldata arguments) internal virtual {
@@ -507,14 +508,18 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
         pd.zeroILPosition = newZeroILPosition;
     }
 
-    function _settleDeltas(PoolKey memory key, address spender, BalanceDelta delta) internal {
-        _settleDelta(spender, key.currency0, uint128(delta.amount0()));
-        _settleDelta(spender, key.currency1, uint128(delta.amount1()));
+    function _settleDeltas(PoolKey memory key, address spender) internal {
+        int256 amount0 = poolManager.currencyDelta(address(this), key.currency0);
+        int256 amount1 = poolManager.currencyDelta(address(this), key.currency1);
+        _settleDelta(spender, key.currency0, uint128(uint256(-amount0)));
+        _settleDelta(spender, key.currency1, uint128(uint256(-amount1)));
     }
 
-    function _takeDeltas(PoolKey memory key, address beneficiary, BalanceDelta delta) internal {
-        poolManager.take(key.currency0, beneficiary, uint256(uint128(-delta.amount0())));
-        poolManager.take(key.currency1, beneficiary, uint256(uint128(-delta.amount1())));
+    function _takeDeltas(PoolKey memory key, address beneficiary) internal {
+        int256 amount0 = poolManager.currencyDelta(address(this), key.currency0);
+        int256 amount1 = poolManager.currencyDelta(address(this), key.currency1);
+        poolManager.take(key.currency0, beneficiary, uint256(amount0));
+        poolManager.take(key.currency1, beneficiary, uint256(amount1));
     }
 
     /**
@@ -542,9 +547,9 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
     }
 
     /**
-     * @notice Returnextra currency to the user
+     * @notice Return extra currency to the user
      * @param pd Data of the pool
-     * @param sender user who initiated the operation
+     * @param sender User who initiated the operation
      */
     function _settleSpenderChange(PoolData storage pd, address sender) internal {
         uint256 balance0 = pd.currency0.balanceOfSelf();
@@ -554,7 +559,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
     }
 
     function _settleClaimsDelta(Currency c) internal {
-        int256 delta = poolManager.currencyDelta(address(this), c); // Delta is postiv when we owe to the pool
+        int256 delta = poolManager.currencyDelta(address(this), c); // Delta is postive when we owe to the pool
         if (delta > 0) {
             poolManager.burn(address(this), c.toId(), uint256(delta));
         } else {
@@ -665,7 +670,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
      * @param pd PoolData of the pool to check
      */
     function _requireValidPool(PoolData storage pd, PoolConfig storage pc) private view {
-        // If pool is not initialized corrency1 will be zero
+        // If pool is not initialized currency1 will be zero
         // currency0 can be zero for initialized pool with NATIVE currency
         if (Currency.unwrap(pd.currency1) == (address(0))) revert InvalidPool();
 

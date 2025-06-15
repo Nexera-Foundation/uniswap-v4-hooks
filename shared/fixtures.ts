@@ -1,4 +1,4 @@
-import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
+import {SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
 import {ethers} from "hardhat";
 
 export async function deployContract(name: string, args: any[], signer: SignerWithAddress) {
