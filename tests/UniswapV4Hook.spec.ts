@@ -97,16 +97,16 @@ export default async function suite() {
 
             let deploySalt = await run("findHookSalt", {
                 uniswapV4HookFactoryAddress: await UniswapV4Hook.getAddress(),
-                startId: "17000",
+                startId: "0",
                 limit: "5000",
                 hookBytecode: hookBytecode,
                 hookArgs: hookArgs,
                 permissions: JSON.stringify(HOOK_PERMISSIONS),
             });
 
-            zeroILHookAddress = await UniswapV4Hook.deploy.staticCall(hookBytecode, hookArgs, deploySalt);
+            zeroILHookAddress = await UniswapV4Hook.deployOwnable.staticCall(hookBytecode, hookArgs, deploySalt);
 
-            await UniswapV4Hook.deploy(hookBytecode, hookArgs, deploySalt);
+            await UniswapV4Hook.deployOwnable(hookBytecode, hookArgs, deploySalt);
 
             ZeroILHook = (await ethers.getContractAt("ZeroILSwapSamePoolHook", zeroILHookAddress)) as ZeroILSwapSamePoolHook;
 
