@@ -9,6 +9,7 @@ import {IUnlockCallback} from "@uniswap/v4-core/src/interfaces/callback/IUnlockC
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
 import {PoolId} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {SwapParams, ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
@@ -22,7 +23,7 @@ import {LiquidityAmountsExtra} from "./utils/LiquidityAmountsExtra.sol";
  * Manages 2 types of liquidity in the Uniswap V4 Pool:
  * - Liquidity in the Position
  * - Liquidity in ERC6909 tokens (used for reserves)
- * 
+ *
  * This contract is Abstract because it needs to be extended to manage position using provided functions:
  * - _createPosition()
  * - _removePosition()
@@ -54,7 +55,6 @@ abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCa
      */
     error TooMuchSlippage();
 
-
     error ManagedPositionExists();
     error ManagedPositionNotExists();
 
@@ -78,7 +78,6 @@ abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCa
         int24 tickLower;
         int24 tickUpper;
     }
-
 
     /**
      * @notice Pool key of the pool we are working with
@@ -272,18 +271,62 @@ abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCa
     }
 
     function _liquidityOfManagedPosition() internal view returns (uint128) {
+        if (position.key == bytes32(0)) return 0;
         return poolManager.getPositionLiquidity(poolId, position.key);
     }
 
-
-    
     function _createPosition(uint128 liquidity, int24 tickLower, int24 tickUpper) internal virtual {
         require(position.key == bytes32(0), ManagedPositionExists());
-        //TODO implement
+        _modifyLiquidity(
+            ModifyLiquidityParams({tickLower: tickLower, tickUpper: tickUpper, liquidityDelta: int256(uint256(liquidity)), salt: MANAGED_POSITION_SALT})
+        );
+        position = ManagedPosition({
+            key: Position.calculatePositionKey(address(this), tickLower, tickUpper, MANAGED_POSITION_SALT),
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
     }
-    function _removePosition() internal virtual returns(uint128 liquidity){
-        require(position.key != bytes32(0), ManagedPositionNotExists());        
-        //TODO implement
+
+    function _removePosition() internal virtual returns (uint128 liquidity) {
+        ManagedPosition memory position_ = position;
+        require(position_.key != bytes32(0), ManagedPositionNotExists());
+        liquidity = poolManager.getPositionLiquidity(poolId, position_.key);
+        if (liquidity != 0) {
+            _modifyLiquidity(
+                ModifyLiquidityParams({
+                    tickLower: position_.tickLower,
+                    tickUpper: position_.tickUpper,
+                    liquidityDelta: -int256(uint256(liquidity)),
+                    salt: MANAGED_POSITION_SALT
+                })
+            );
+        }
+        position = ManagedPosition({key: bytes32(0), tickLower: 0, tickUpper: 0});
+    }
+
+    function _shiftPosition(int24 tickLower, int24 tickUpper) internal virtual {
+        ManagedPosition memory position_ = position;
+        require(position_.key != bytes32(0), ManagedPositionNotExists());
+        uint128 liquidity = poolManager.getPositionLiquidity(poolId, position_.key);
+        if (liquidity != 0) {
+            //TODO we can probably combine this two calls into one, but there are some questions. Let's make sure it is working this way first, and then refactor
+            _modifyLiquidity(
+                ModifyLiquidityParams({
+                    tickLower: position_.tickLower,
+                    tickUpper: position_.tickUpper,
+                    liquidityDelta: -int256(uint256(liquidity)),
+                    salt: MANAGED_POSITION_SALT
+                })
+            );
+            _modifyLiquidity(
+                ModifyLiquidityParams({tickLower: tickLower, tickUpper: tickUpper, liquidityDelta: int256(uint256(liquidity)), salt: MANAGED_POSITION_SALT})
+            );
+        }
+        position = ManagedPosition({
+            key: Position.calculatePositionKey(address(this), tickLower, tickUpper, MANAGED_POSITION_SALT),
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
     }
 
     /**
