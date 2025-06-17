@@ -3,12 +3,13 @@ pragma solidity ^0.8.27;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./LiquidityAccounting.sol";
+import "./Rebalancer.sol";
 
 /**
  * Position management based on
  * https://www.notion.so/nuant/Uniswap-Liquidity-Allocation-1cada1ba918d805895f6c5fbf40bfd53
  */
-abstract contract PositionManager is LiquidityAccounting, Ownable {
+abstract contract PositionManager is LiquidityAccounting, Rebalancer, Ownable {
     // Constant used for readability
     uint256 private constant WAD = 1e18;
     uint256 private constant WAD_SQUARE = WAD * WAD;
@@ -45,8 +46,8 @@ abstract contract PositionManager is LiquidityAccounting, Ownable {
 
         // Now we have whole liquidity as ERC-6909 balances (reserves):
         (uint256 balance0, uint256 balance1) = reservesBalances();
-        (balance0, balance1) = _rebalance(balance0, balance1, w1);
-        
+        (balance0, balance1) = _rebalance(balance0, balance1, w1, sqrtPriceX96);
+
         uint128 liquidityDelta = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
             sqrtPriceAX96,
@@ -58,23 +59,7 @@ abstract contract PositionManager is LiquidityAccounting, Ownable {
         // Create new position
         _createPosition(liquidityDelta, sqrtPriceAX96, sqrtPriceBX96);
     }
-    /**
-     * Rebalances funds
-     * @param balance0 Current balance of token0
-     * @param balance1 Current balance of token1
-     * @param w1 Required percentage (WAD = 100%) of token1. Percentage of token0 can be calculated as WAD - w1
-     * @return token0 New balance of token0
-     * @return token1 New balance of token1
-     */
-    function _rebalance(uint256 balance0, uint256 balance1, uint256 w1) internal returns(uint256 token0, uint256 token1){
-        uint256 w1Actual = WAD * balance1 / (balance0 + balance1);
-        if(w1Actual == w1) return(balance0, balance1);
-        if(w1Actual > w1) {
-            //TODO Swap token1 to token0
-        } else {
-            //TODO Swap token0 to token1
-        }
-    }
+
 
     /**
      * Calculates what to do with position

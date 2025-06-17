@@ -18,7 +18,7 @@ import {BaseHook} from "./lib/oz-uniswap-hooks/base/BaseHook.sol";
 import {CurrencySettler} from "./lib/oz-uniswap-hooks/utils/CurrencySettler.sol";
 import {IHookEvents} from "./lib/oz-uniswap-hooks/interfaces/IHookEvents.sol";
 import {LiquidityAmountsExtra} from "./utils/LiquidityAmountsExtra.sol";
-import {UnlockDispatcher} from "./UnlockDispatcher.sol";
+import {BasePoolHelper} from "./BasePoolHelper.sol";
 
 /**
  * Manages 2 types of liquidity in the Uniswap V4 Pool:
@@ -29,7 +29,7 @@ import {UnlockDispatcher} from "./UnlockDispatcher.sol";
  * - _createPosition()
  * - _removePosition()
  */
-abstract contract LiquidityAccounting is ERC20, UnlockDispatcher, IHookEvents {
+abstract contract LiquidityAccounting is ERC20, BasePoolHelper, IHookEvents {
     bytes32 constant MANAGED_POSITION_SALT = bytes32(0); // We aer only using one position
 
     using CurrencySettler for Currency;
@@ -80,11 +80,7 @@ abstract contract LiquidityAccounting is ERC20, UnlockDispatcher, IHookEvents {
         int24 tickUpper;
     }
 
-    /**
-     * @notice Pool key of the pool we are working with
-     */
-    PoolKey public poolKey;
-    PoolId public poolId;
+
     ManagedPosition public position;
 
     /**
@@ -95,11 +91,6 @@ abstract contract LiquidityAccounting is ERC20, UnlockDispatcher, IHookEvents {
     modifier ensure(uint256 deadline) {
         if (deadline < block.timestamp) revert ExpiredPastDeadline();
         _;
-    }
-
-    constructor(PoolKey memory poolKey_) {
-        poolKey = poolKey_;
-        poolId = poolKey_.toId();
     }
 
     function reservesBalances() public view returns (uint256 balance0, uint256 balance1) {
