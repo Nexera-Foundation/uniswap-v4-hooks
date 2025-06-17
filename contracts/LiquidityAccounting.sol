@@ -18,6 +18,7 @@ import {BaseHook} from "./lib/oz-uniswap-hooks/base/BaseHook.sol";
 import {CurrencySettler} from "./lib/oz-uniswap-hooks/utils/CurrencySettler.sol";
 import {IHookEvents} from "./lib/oz-uniswap-hooks/interfaces/IHookEvents.sol";
 import {LiquidityAmountsExtra} from "./utils/LiquidityAmountsExtra.sol";
+import {UnlockDispatcher} from "./UnlockDispatcher.sol";
 
 /**
  * Manages 2 types of liquidity in the Uniswap V4 Pool:
@@ -28,7 +29,7 @@ import {LiquidityAmountsExtra} from "./utils/LiquidityAmountsExtra.sol";
  * - _createPosition()
  * - _removePosition()
  */
-abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCallback {
+abstract contract LiquidityAccounting is ERC20, UnlockDispatcher, IHookEvents {
     bytes32 constant MANAGED_POSITION_SALT = bytes32(0); // We aer only using one position
 
     using CurrencySettler for Currency;
@@ -125,7 +126,7 @@ abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCa
      */
     function addLiquidity(
         AddLiquidityParams calldata params
-    ) external payable virtual ensure(params.deadline) returns (BalanceDelta delta, uint256 /*shares*/) {
+    ) external payable virtual ensure(params.deadline) returns (BalanceDelta delta, uint256 shares) {
         uint160 sqrtPriceX96 = _currentSqrtPriceX96();
 
         // Revert if msg.value is non-zero but currency0 is not native
@@ -133,7 +134,8 @@ abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCa
         if (!isNative && msg.value > 0) revert InvalidNativeValue();
 
         // Get the liquidity modification parameters and the amount of liquidity shares to mint
-        (ModifyLiquidityParams memory modifyParams, uint256 shares) = _getAddLiquidity(sqrtPriceX96, params);
+        ModifyLiquidityParams memory modifyParams;
+        (modifyParams, shares) = _getAddLiquidity(sqrtPriceX96, params);
 
         // Apply the liquidity modification
         (BalanceDelta callerDelta, BalanceDelta feesAccrued) = _modifyLiquidity(modifyParams);
@@ -267,9 +269,9 @@ abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCa
         // TODO Handle when position does not have enough liquidity (it is in reserves)
     }
 
-    function _currentSqrtPriceX96() internal view returns(uint160){
+    function _currentSqrtPriceX96() internal view returns (uint160) {
         (uint160 sqrtPriceX96, , , ) = poolManager.getSlot0(poolKey.toId());
-        if (sqrtPriceX96 == 0) revert PoolNotInitialized();        
+        if (sqrtPriceX96 == 0) revert PoolNotInitialized();
         return sqrtPriceX96;
     }
 
@@ -281,7 +283,7 @@ abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCa
     function _createPosition(uint128 liquidity, uint160 sqrtPriceAX96, uint160 sqrtPriceBX96) internal virtual {
         _createPosition(liquidity, TickMath.getTickAtSqrtPrice(sqrtPriceAX96), TickMath.getTickAtSqrtPrice(sqrtPriceBX96));
     }
-    
+
     function _createPosition(uint128 liquidity, int24 tickLower, int24 tickUpper) internal virtual {
         require(position.key == bytes32(0), ManagedPositionExists());
         _modifyLiquidity(
@@ -311,56 +313,19 @@ abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCa
         position = ManagedPosition({key: bytes32(0), tickLower: 0, tickUpper: 0});
     }
 
-    // function _shiftPosition(int24 tickLower, int24 tickUpper) internal virtual {
-    //     ManagedPosition memory position_ = position;
-    //     require(position_.key != bytes32(0), ManagedPositionNotExists());
-    //     uint128 liquidity = poolManager.getPositionLiquidity(poolId, position_.key);
-    //     if (liquidity != 0) {
-    //         //TODO we can probably combine this two calls into one, but there are some questions. Let's make sure it is working this way first, and then refactor
-    //         _modifyLiquidity(
-    //             ModifyLiquidityParams({
-    //                 tickLower: position_.tickLower,
-    //                 tickUpper: position_.tickUpper,
-    //                 liquidityDelta: -int256(uint256(liquidity)),
-    //                 salt: MANAGED_POSITION_SALT
-    //             })
-    //         );
-    //         _modifyLiquidity(
-    //             ModifyLiquidityParams({tickLower: tickLower, tickUpper: tickUpper, liquidityDelta: int256(uint256(liquidity)), salt: MANAGED_POSITION_SALT})
-    //         );
-    //     }
-    //     position = ManagedPosition({
-    //         key: Position.calculatePositionKey(address(this), tickLower, tickUpper, MANAGED_POSITION_SALT),
-    //         tickLower: tickLower,
-    //         tickUpper: tickUpper
-    //     });
-    // }
-
-    /**
-     * @dev Calls the `PoolManager` to unlock and call back the hook's `unlockCallback` function.
-     *
-     * @param params The encoded parameters for the liquidity modification based on the `ModifyLiquidityParams` struct.
-     * @return callerDelta The balance delta from the liquidity modification. This is the total of both principal and fee deltas.
-     * @return feesAccrued The balance delta of the fees generated in the liquidity range.
-     */
-    // slither-disable-next-line dead-code
-    function _modifyLiquidity(ModifyLiquidityParams memory params) internal virtual returns (BalanceDelta callerDelta, BalanceDelta feesAccrued) {
-        (callerDelta, feesAccrued) = abi.decode(poolManager.unlock(abi.encode(params)), (BalanceDelta, BalanceDelta));
-    }
-
     /**
      * @dev Callback from the `PoolManager` when liquidity is modified, either adding or removing.
-     * Note: Based on OZ BaseCustomAccounting
+     * Note: Based on OZ `BaseCustomAccounting.unlockCallback()`
      *
-     * @param rawData The encoded `ModifyLiquidityParams` struct.
-     * @return returnData The encoded caller and fees accrued deltas.
+     * @param params `ModifyLiquidityParams` struct
+     * @return callerDelta The encoded caller delta.
+     * @return feesAccrued The encoded fees accrued delta
      */
-    function unlockCallback(bytes calldata rawData) external virtual override onlyPoolManager returns (bytes memory returnData) {
-        ModifyLiquidityParams memory params = abi.decode(rawData, (ModifyLiquidityParams));
+    function _unlockedModifyLiquidity(ModifyLiquidityParams memory params) internal override returns (BalanceDelta callerDelta, BalanceDelta feesAccrued) {
         PoolKey memory key = poolKey;
 
         // Get liquidity modification deltas
-        (BalanceDelta callerDelta, BalanceDelta feesAccrued) = poolManager.modifyLiquidity(key, params, "");
+        (callerDelta, feesAccrued) = poolManager.modifyLiquidity(key, params, "");
 
         // Calculate the principal delta
         BalanceDelta principalDelta = callerDelta - feesAccrued;
@@ -388,7 +353,7 @@ abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCa
         emit HookModifyLiquidity(PoolId.unwrap(poolKey.toId()), address(this), principalDelta.amount0(), principalDelta.amount1());
 
         // Return both deltas so that slippage checks can be done on the principal delta
-        return abi.encode(callerDelta, feesAccrued);
+        return (callerDelta, feesAccrued);
     }
 
     /**
