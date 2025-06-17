@@ -34,17 +34,58 @@ abstract contract PositionManager is LiquidityAccounting, Ownable {
         drift = drift_;
     }
 
+    function _updatePosition(uint256 feeRate) internal {
+        uint160 sqrtPriceX96 = _currentSqrtPriceX96();
+        uint128 liquidityOfManagedPosition = _liquidityOfManagedPosition();
+        (PositionOperation pOp, uint256 w1, uint160 sqrtPriceAX96, uint160 sqrtPriceBX96) = _calculatePositionOperation(feeRate, sqrtPriceX96);
+        
+        // TODO Optimisation: no need to close position if we already have one with same bounds. But needs more work on LiquidityAccounting
+        if(liquidityOfManagedPosition > 0) _removePosition(); // If we have a position - closing it
+        if(pOp == PositionOperation.CLOSE) return;
+
+        // Now we have whole liquidity as ERC-6909 balances (reserves):
+        (uint256 balance0, uint256 balance1) = reservesBalances();
+        (balance0, balance1) = _rebalance(balance0, balance1, w1);
+        
+        uint128 liquidityDelta = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            sqrtPriceAX96,
+            sqrtPriceBX96,
+            balance0,
+            balance1
+        );
+
+        // Create new position
+        _createPosition(liquidityDelta, sqrtPriceAX96, sqrtPriceBX96);
+    }
+    /**
+     * Rebalances funds
+     * @param balance0 Current balance of token0
+     * @param balance1 Current balance of token1
+     * @param w1 Required percentage (WAD = 100%) of token1. Percentage of token0 can be calculated as WAD - w1
+     * @return token0 New balance of token0
+     * @return token1 New balance of token1
+     */
+    function _rebalance(uint256 balance0, uint256 balance1, uint256 w1) internal returns(uint256 token0, uint256 token1){
+        uint256 w1Actual = WAD * balance1 / (balance0 + balance1);
+        if(w1Actual == w1) return(balance0, balance1);
+        if(w1Actual > w1) {
+            //TODO Swap token1 to token0
+        } else {
+            //TODO Swap token0 to token1
+        }
+    }
+
     /**
      * Calculates what to do with position
      * @param feeRate current feeRate of the pool
      * @param sqrtPriceX96 current square root price of the pool
      * @return pOp Operation: Rebalance or Close position
-     * @return w0 Portion of total funds to allocate in token0, WAD = 100%
      * @return w1 Portion of total funds to allocate in token1, WAD = 100%
      * @return sqrtPriceAX96 A sqrt price representing lower tick of new position
      * @return sqrtPriceBX96 A sqrt price representing upper tick of new position
      */
-    function _calculatePositionOperation(uint256 feeRate, uint160 sqrtPriceX96) internal view virtual returns(PositionOperation pOp, uint256 w0, uint256 w1, uint160 sqrtPriceAX96, uint160 sqrtPriceBX96) {
+    function _calculatePositionOperation(uint256 feeRate, uint160 sqrtPriceX96) internal view virtual returns(PositionOperation pOp, uint256 w1, uint160 sqrtPriceAX96, uint160 sqrtPriceBX96) {
         uint256 deltaStar = _deltaStar(feeRate);
         uint256 deltaU = deltaStar + drift;
         uint256 deltaD = deltaStar - drift;
@@ -56,7 +97,7 @@ abstract contract PositionManager is LiquidityAccounting, Ownable {
         if((vU2_wad2 < WAD_SQUARE) && (vD2_wad2 < WAD_SQUARE)) {
             pOp = PositionOperation.REBALANCE;
             w1 = WAD * deltaD / (deltaD + deltaU);
-            w0 = WAD - w1;
+            //w0 = WAD - w1; // No need to calculate this
             sqrtPriceAX96 = uint160(uint256(sqrtPriceX96) * vD2_wad2 / WAD_SQUARE);
             sqrtPriceBX96 = uint160(uint256(sqrtPriceX96) * WAD_SQUARE / vU2_wad2);
         } else {

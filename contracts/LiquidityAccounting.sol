@@ -126,8 +126,7 @@ abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCa
     function addLiquidity(
         AddLiquidityParams calldata params
     ) external payable virtual ensure(params.deadline) returns (BalanceDelta delta, uint256 /*shares*/) {
-        (uint160 sqrtPriceX96, , , ) = poolManager.getSlot0(poolKey.toId());
-        if (sqrtPriceX96 == 0) revert PoolNotInitialized();
+        uint160 sqrtPriceX96 = _currentSqrtPriceX96();
 
         // Revert if msg.value is non-zero but currency0 is not native
         bool isNative = poolKey.currency0.isAddressZero();
@@ -167,9 +166,7 @@ abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCa
      * @return shares Shares burned
      */
     function removeLiquidity(RemoveLiquidityParams calldata params) external virtual ensure(params.deadline) returns (BalanceDelta delta, uint256) {
-        (uint160 sqrtPriceX96, , , ) = poolManager.getSlot0(poolKey.toId());
-
-        if (sqrtPriceX96 == 0) revert PoolNotInitialized();
+        uint160 sqrtPriceX96 = _currentSqrtPriceX96();
 
         // Get the liquidity modification parameters and the amount of liquidity shares to burn
         (ModifyLiquidityParams memory modifyParams, uint256 shares) = _getRemoveLiquidity(sqrtPriceX96, params);
@@ -270,11 +267,21 @@ abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCa
         // TODO Handle when position does not have enough liquidity (it is in reserves)
     }
 
+    function _currentSqrtPriceX96() internal view returns(uint160){
+        (uint160 sqrtPriceX96, , , ) = poolManager.getSlot0(poolKey.toId());
+        if (sqrtPriceX96 == 0) revert PoolNotInitialized();        
+        return sqrtPriceX96;
+    }
+
     function _liquidityOfManagedPosition() internal view returns (uint128) {
         if (position.key == bytes32(0)) return 0;
         return poolManager.getPositionLiquidity(poolId, position.key);
     }
 
+    function _createPosition(uint128 liquidity, uint160 sqrtPriceAX96, uint160 sqrtPriceBX96) internal virtual {
+        _createPosition(liquidity, TickMath.getTickAtSqrtPrice(sqrtPriceAX96), TickMath.getTickAtSqrtPrice(sqrtPriceBX96));
+    }
+    
     function _createPosition(uint128 liquidity, int24 tickLower, int24 tickUpper) internal virtual {
         require(position.key == bytes32(0), ManagedPositionExists());
         _modifyLiquidity(
@@ -304,30 +311,30 @@ abstract contract LiquidityAccounting is ERC20, BaseHook, IHookEvents, IUnlockCa
         position = ManagedPosition({key: bytes32(0), tickLower: 0, tickUpper: 0});
     }
 
-    function _shiftPosition(int24 tickLower, int24 tickUpper) internal virtual {
-        ManagedPosition memory position_ = position;
-        require(position_.key != bytes32(0), ManagedPositionNotExists());
-        uint128 liquidity = poolManager.getPositionLiquidity(poolId, position_.key);
-        if (liquidity != 0) {
-            //TODO we can probably combine this two calls into one, but there are some questions. Let's make sure it is working this way first, and then refactor
-            _modifyLiquidity(
-                ModifyLiquidityParams({
-                    tickLower: position_.tickLower,
-                    tickUpper: position_.tickUpper,
-                    liquidityDelta: -int256(uint256(liquidity)),
-                    salt: MANAGED_POSITION_SALT
-                })
-            );
-            _modifyLiquidity(
-                ModifyLiquidityParams({tickLower: tickLower, tickUpper: tickUpper, liquidityDelta: int256(uint256(liquidity)), salt: MANAGED_POSITION_SALT})
-            );
-        }
-        position = ManagedPosition({
-            key: Position.calculatePositionKey(address(this), tickLower, tickUpper, MANAGED_POSITION_SALT),
-            tickLower: tickLower,
-            tickUpper: tickUpper
-        });
-    }
+    // function _shiftPosition(int24 tickLower, int24 tickUpper) internal virtual {
+    //     ManagedPosition memory position_ = position;
+    //     require(position_.key != bytes32(0), ManagedPositionNotExists());
+    //     uint128 liquidity = poolManager.getPositionLiquidity(poolId, position_.key);
+    //     if (liquidity != 0) {
+    //         //TODO we can probably combine this two calls into one, but there are some questions. Let's make sure it is working this way first, and then refactor
+    //         _modifyLiquidity(
+    //             ModifyLiquidityParams({
+    //                 tickLower: position_.tickLower,
+    //                 tickUpper: position_.tickUpper,
+    //                 liquidityDelta: -int256(uint256(liquidity)),
+    //                 salt: MANAGED_POSITION_SALT
+    //             })
+    //         );
+    //         _modifyLiquidity(
+    //             ModifyLiquidityParams({tickLower: tickLower, tickUpper: tickUpper, liquidityDelta: int256(uint256(liquidity)), salt: MANAGED_POSITION_SALT})
+    //         );
+    //     }
+    //     position = ManagedPosition({
+    //         key: Position.calculatePositionKey(address(this), tickLower, tickUpper, MANAGED_POSITION_SALT),
+    //         tickLower: tickLower,
+    //         tickUpper: tickUpper
+    //     });
+    // }
 
     /**
      * @dev Calls the `PoolManager` to unlock and call back the hook's `unlockCallback` function.
