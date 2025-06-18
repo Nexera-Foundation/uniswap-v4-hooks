@@ -37,18 +37,18 @@ abstract contract Rebalancer is BasePoolHelper {
         SwapParams memory swapParams;
         if (w1Actual > w1) {
             //Swap token1 to token0
-            //zeroForOne = false; // skip bacause it's false by default
-            uint256 diff = (w1Actual - w1);
+            //zeroForOne = false; // skip because it's false by default
+            uint256 diff = w1Actual - w1; // Percentage of funds we need to sell
 
-            swapParams.amountSpecified = -int256(diff); // Negative means we are specifying exact in
+            swapParams.amountSpecified = -int256(diff * balance1 / WAD); // Negative means we are specifying exact in
             swapParams.sqrtPriceLimitX96 = TickMath.MAX_SQRT_PRICE - 1;
         } else {
             //Swap token0 to token1
             swapParams.zeroForOne = true;
 
-            uint256 diff = (w1 - w1Actual);
+            uint256 diff = (w1 - w1Actual); // Percentage of funds we need to sell. This is equal to (w0Actual - w0)
 
-            swapParams.amountSpecified = -int256(diff); // Negative means we are specifying exact in
+            swapParams.amountSpecified = -int256(diff * balance0 / WAD); // Negative means we are specifying exact in
             swapParams.sqrtPriceLimitX96 = TickMath.MIN_SQRT_PRICE + 1;
         }
 
