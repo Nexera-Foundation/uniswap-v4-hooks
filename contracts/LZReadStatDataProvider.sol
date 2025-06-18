@@ -10,7 +10,7 @@ import {MessagingFee, MessagingReceipt, Origin} from "@layerzerolabs/lz-evm-prot
 
 import {StatCollectorHook} from "./StatCollectorHook.sol";
 
-abstract contract LZReadStatDataProvider is StatCollectorHook, OAppRead, IOAppReducer {
+abstract contract LZReadStatDataProvider is OAppRead, StatCollectorHook, IOAppReducer {
     using OptionsBuilder for bytes;
 
     /// @dev Valid LZ Read channel ids start from `eid > 4294965694` (which is `type(uint32).max - 1600`).

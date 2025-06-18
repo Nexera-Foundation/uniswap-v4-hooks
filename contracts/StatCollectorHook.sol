@@ -56,7 +56,7 @@ abstract contract StatCollectorHook is BaseHook {
             });
     }
 
-    function _afterInitialize(address, PoolKey calldata pk, uint160, int24) internal override returns (bytes4) {
+    function _afterInitialize(address, PoolKey calldata pk, uint160, int24) internal virtual override returns (bytes4) {
         require(PoolId.unwrap(managedPoolId) == bytes32(0), AlreadyInitialized());
         managedPoolId = pk.toId();
         return IHooks.afterInitialize.selector;
@@ -69,7 +69,7 @@ abstract contract StatCollectorHook is BaseHook {
         BalanceDelta,
         BalanceDelta,
         bytes calldata
-    ) internal override onlyManagedPool(pk) returns (bytes4, BalanceDelta) {
+    ) internal virtual override onlyManagedPool(pk) returns (bytes4, BalanceDelta) {
         require(change.liquidityDelta > 0, WrongLiquidityDeltaSign(true, change.liquidityDelta));
         (uint160 currentSqrtPriceX96, /*int24 tick*/, /*uint24 protocolFee*/, /*uint24 lpFee*/) = poolManager.getSlot0(managedPoolId);
         (uint256 amount0, uint256 amount1) = LiquidityAmountsExtra.getAmountsForLiquidity(
@@ -90,7 +90,7 @@ abstract contract StatCollectorHook is BaseHook {
         BalanceDelta,
         BalanceDelta,
         bytes calldata
-    ) internal override onlyManagedPool(pk) returns (bytes4, BalanceDelta) {
+    ) internal virtual override onlyManagedPool(pk) returns (bytes4, BalanceDelta) {
         if(change.liquidityDelta == 0) {
             // This is a call used to receive fee
             return (IHooks.afterAddLiquidity.selector, BalanceDeltaLibrary.ZERO_DELTA); 
@@ -115,7 +115,7 @@ abstract contract StatCollectorHook is BaseHook {
         SwapParams calldata,
         BalanceDelta swapDelta,
         bytes calldata
-    ) internal override onlyManagedPool(pk) returns (bytes4, int128) {
+    ) internal virtual override onlyManagedPool(pk) returns (bytes4, int128) {
         // As specified in IHooks: swapDelta The amount owed to the caller (positive) or owed to the pool (negative)
         // So positive amount should be subtracted from the liquidity (it is sent to the swapper)
         // and the value of negative amount should be added to liquidity (this is provided by swapper), so we subtract the negative value

@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./LiquidityAccounting.sol";
-import "./Rebalancer.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {LiquidityAmounts} from "@uniswap/v4-periphery/src/libraries/LiquidityAmounts.sol";
+import {LiquidityAccounting} from "./LiquidityAccounting.sol";
+import {Rebalancer} from "./Rebalancer.sol";
 
 /**
  * Position management based on
  * https://www.notion.so/nuant/Uniswap-Liquidity-Allocation-1cada1ba918d805895f6c5fbf40bfd53
  */
-abstract contract PositionManager is LiquidityAccounting, Rebalancer, Ownable {
+abstract contract PositionManager is Ownable, LiquidityAccounting, Rebalancer {
     // Constant used for readability
     uint256 private constant WAD = 1e18;
     uint256 private constant WAD_SQUARE = WAD * WAD;
