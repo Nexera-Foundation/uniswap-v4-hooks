@@ -17,6 +17,8 @@ import {StatCollectorHook} from "./StatCollectorHook.sol";
 import {BasePoolHelper} from "./BasePoolHelper.sol";
 
 contract LVRLiquidityManager is PositionManager, LZReadStatDataProvider {
+    error NotReadyToUpdatePosition();
+
     struct LZReadConfig {
         address endpoint;
         uint32 eid;
@@ -24,6 +26,9 @@ contract LVRLiquidityManager is PositionManager, LZReadStatDataProvider {
         uint16 confirmations;
         address delegate; 
     }
+
+    uint256 public lastRebalancingTimestamp;
+
     constructor(
         IPoolManager poolManager_,
         PoolKey memory poolKey_,
@@ -37,7 +42,22 @@ contract LVRLiquidityManager is PositionManager, LZReadStatDataProvider {
         BasePoolHelper(poolKey_)
         OAppRead(lzReadConfig.endpoint, lzReadConfig.delegate)
         LZReadStatDataProvider(lzReadConfig.eid, lzReadConfig.readChannel, lzReadConfig.confirmations)
-    {}
+    {
+    }
+
+
+    function isReadyToUpdatePosition() public view returns(bool){
+        return
+         (lastFeeRate != 0) // if it is 0, then we had no feeRate update yet, so no point to rebalancing
+         && (lastRebalancingTimestamp < lastFeeRateUpdateTimestamp); // We should have new feeRate
+    }
+
+    function updatePosition() external {
+        require(isReadyToUpdatePosition(), NotReadyToUpdatePosition());
+        _updatePosition(lastFeeRate);
+    }
+
+    // ========== Functions required by Solidity for correct inheritance =============
 
     function _afterInitialize(address sender, PoolKey calldata key, uint160 sqrtPriceX96, int24 tick) internal virtual override(BaseHook, StatCollectorHook) returns (bytes4) {
         super._afterInitialize(sender, key, sqrtPriceX96, tick);

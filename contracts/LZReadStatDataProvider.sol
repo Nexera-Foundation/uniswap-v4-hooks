@@ -13,6 +13,9 @@ import {StatCollectorHook} from "./StatCollectorHook.sol";
 abstract contract LZReadStatDataProvider is OAppRead, StatCollectorHook, IOAppReducer {
     using OptionsBuilder for bytes;
 
+    error NotReadyToReadFeeRate();
+
+
     /// @dev Valid LZ Read channel ids start from `eid > 4294965694` (which is `type(uint32).max - 1600`).
     uint32 internal constant LZ_READ_CHANNEL_EID_THRESHOLD = 4294965694;
 
@@ -33,11 +36,11 @@ abstract contract LZReadStatDataProvider is OAppRead, StatCollectorHook, IOAppRe
         uint256 fee1;
     }
 
-    uint256 feeRateReadingInterval; //Interval for calculating fee rate
-    uint256 intermediateLiquidityPoints; //How many additional timestamps to add for more precise liquidity estimation
+    uint256 public feeRateReadingInterval; //Interval for calculating fee rate
+    uint256 public intermediateLiquidityPoints; //How many additional timestamps to add for more precise liquidity estimation
 
-    uint256 lastFeeRateUpdateTimestamp; // Timestamp when last fee rate was calculated
-    uint256 lastFeeRate; // Last calculated fee rate multiplied to 1e18
+    uint256 public lastFeeRateUpdateTimestamp; // Timestamp when last fee rate was calculated
+    uint256 public lastFeeRate; // Last calculated fee rate multiplied to 1e18
 
     /**
      * @param readChannel Read channel used to read on current chain
@@ -47,6 +50,8 @@ abstract contract LZReadStatDataProvider is OAppRead, StatCollectorHook, IOAppRe
         _readChannel = readChannel;
         setReadChannel(readChannel, true);
         _confirmations = confirmations;
+        
+        lastFeeRateUpdateTimestamp = block.timestamp; // This is needed to not allow feeRate update until first interval passes, since there is not enough data yet
     }
 
     function setConfig(uint256 feeRateReadingInterval_, uint256 intermediateLiquidityPoints_) external onlyOwner {
@@ -54,7 +59,14 @@ abstract contract LZReadStatDataProvider is OAppRead, StatCollectorHook, IOAppRe
         intermediateLiquidityPoints = intermediateLiquidityPoints_;
     }
 
+    function isReadyToReadFeeRate() public view returns(bool) {
+       return (lastFeeRateUpdateTimestamp + feeRateReadingInterval) >= block.timestamp;
+    }
+
+
     function initiateReadFeeRate() external payable returns (MessagingReceipt memory receipt) {
+        require(isReadyToReadFeeRate(), NotReadyToReadFeeRate());
+        
         bytes memory readCmd = _encodeReadStatDataCall(_prepareFeeRateReadTimestamps());
         bytes memory opts = OptionsBuilder.newOptions().addExecutorLzReadOption(READ_CALLBACK_GAS_LIMIT, uint32(readCmd.length), 0);
         return _lzSend(_readChannel, readCmd, opts, MessagingFee(msg.value, 0), payable(msg.sender));

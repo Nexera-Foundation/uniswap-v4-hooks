@@ -59,6 +59,12 @@ abstract contract LiquidityAccounting is ERC20, BasePoolHelper, IHookEvents {
     error ManagedPositionExists();
     error ManagedPositionNotExists();
 
+    /**
+     * @dev The pool is in a state when it has shares but no liquidity.
+     * Since this state is not correct, we can not add mor liquidity to it until this is somehow solved
+     */
+    error InconsistentState();
+
     struct AddLiquidityParams {
         uint256 amount0Desired; // Desired amount of token0 to provide
         uint256 amount1Desired; // Desired amount of token1 to provide
@@ -218,7 +224,12 @@ abstract contract LiquidityAccounting is ERC20, BasePoolHelper, IHookEvents {
             reserve1
         );
         uint256 currentLiquidity = _liquidityOfManagedPosition() + reservesLiquidity;
-        shares = (totalSupply() * liquidityDelta) / currentLiquidity;
+        if(currentLiquidity != 0) {
+            shares = (totalSupply() * liquidityDelta) / currentLiquidity;
+        } else {
+            require(totalSupply() == 0, InconsistentState());
+            shares = liquidityDelta; //Since we don't have
+        }
     }
 
     /**
