@@ -16,7 +16,7 @@ abstract contract Rebalancer is BasePoolHelper {
     error NotEnoughLiquidity(PoolId);
 
     /**
-     * Rebalances funds
+     * Rebalance funds: swap token0 to token1 or vice versa to ensure requested funds distribution
      * @param balance0 Current balance of token0
      * @param balance1 Current balance of token1
      * @param w1 Required percentage (WAD = 100%) of token1. Percentage of token0 can be calculated as WAD - w1
@@ -41,15 +41,15 @@ abstract contract Rebalancer is BasePoolHelper {
             uint256 diff = w1Actual - w1; // Percentage of funds we need to sell
 
             swapParams.amountSpecified = -int256(diff * balance1 / WAD); // Negative means we are specifying exact in
-            swapParams.sqrtPriceLimitX96 = TickMath.MAX_SQRT_PRICE - 1;
+            swapParams.sqrtPriceLimitX96 = TickMath.MAX_SQRT_PRICE - 1; // TODO Think of stricter limit
         } else {
             //Swap token0 to token1
             swapParams.zeroForOne = true;
 
             uint256 diff = (w1 - w1Actual); // Percentage of funds we need to sell. This is equal to (w0Actual - w0)
 
-            swapParams.amountSpecified = -int256(diff * balance0 / WAD); // Negative means we are specifying exact in
-            swapParams.sqrtPriceLimitX96 = TickMath.MIN_SQRT_PRICE + 1;
+            swapParams.amountSpecified = -int256(diff * balance0 / WAD);// Negative means we are specifying exact in
+            swapParams.sqrtPriceLimitX96 = TickMath.MIN_SQRT_PRICE + 1; // TODO Think of stricter limit
         }
 
         BalanceDelta swapDelta = _swap(swapParams);
