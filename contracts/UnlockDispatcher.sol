@@ -67,8 +67,6 @@ abstract contract UnlockDispatcher is IUnlockCallback, BaseHook {
         swapDelta = abi.decode(resultData, (BalanceDelta));
     }
 
-
-
     function _unlockedSwap(SwapParams memory params) internal virtual returns (BalanceDelta swapDelta);
 
     function _unlockedModifyLiquidity(ModifyLiquidityParams memory params) internal virtual returns (BalanceDelta callerDelta, BalanceDelta feesAccrued);

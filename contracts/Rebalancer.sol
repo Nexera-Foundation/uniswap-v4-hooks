@@ -25,23 +25,30 @@ abstract contract Rebalancer is BasePoolHelper {
      * @return token1 New balance of token1
      */
     function _rebalance(uint256 balance0, uint256 balance1, uint256 w1, uint160 sqrtPriceX96) internal returns (uint256 token0, uint256 token1) {
-        uint256 w1Actual = (WAD * balance1) / (balance0 + balance1);
+        // Price of token0 over token1
+        uint256 poolPrice = uint256(sqrtPriceX96) * uint256(sqrtPriceX96) * WAD / 2 ** (96 * 2);
+
+        uint256 balance0InToken1 = balance0 * poolPrice / WAD; // Convert balance0 to token1 equivalent
+
+        uint256 w1Actual = (WAD * balance1) / (balance0InToken1 + balance1);
+
         if (w1Actual == w1) return (balance0, balance1);
 
-        // TODO Calculate amount to swap
         SwapParams memory swapParams;
         if (w1Actual > w1) {
-            //TODO Swap token1 to token0
+            //Swap token1 to token0
             //zeroForOne = false; // skip bacause it's false by default
             uint256 diff = (w1Actual - w1);
-            //TODO real diff..
-            swapParams.amountSpecified = -int256(balance1); // Negative means we are specifying exact in
+
+            swapParams.amountSpecified = -int256(diff); // Negative means we are specifying exact in
             swapParams.sqrtPriceLimitX96 = TickMath.MAX_SQRT_PRICE - 1;
         } else {
-            //TODO Swap token0 to token1
+            //Swap token0 to token1
             swapParams.zeroForOne = true;
-            //TODO real diff..
-            swapParams.amountSpecified = -int256(balance0); // Negative means we are specifying exact in
+
+            uint256 diff = (w1 - w1Actual);
+
+            swapParams.amountSpecified = -int256(diff); // Negative means we are specifying exact in
             swapParams.sqrtPriceLimitX96 = TickMath.MIN_SQRT_PRICE + 1;
         }
 
@@ -51,7 +58,7 @@ abstract contract Rebalancer is BasePoolHelper {
         //1: Swap 0 => 1: swapDelta.amount0() is negative, because it is "exact in", so when adding it to balance0 we are actually decreasing it, swapDelta.amount1() is positive
         //2: Swap 1 => 0: swapDelta.amount1() is negative, because it is "exact in", so when adding it to balance1 we are actually decreasing it, swapDelta.amount0() is positive
         token0 = uint256(int256(balance0) + int256(swapDelta.amount0()));
-        token0 = uint256(int256(balance1) + int256(swapDelta.amount1()));
+        token1 = uint256(int256(balance1) + int256(swapDelta.amount1()));
     }
 
     function _unlockedSwap(SwapParams memory params) internal virtual override returns (BalanceDelta swapDelta) {
