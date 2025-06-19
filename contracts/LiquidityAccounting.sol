@@ -372,4 +372,17 @@ abstract contract LiquidityAccounting is ERC20, BasePoolHelper, IHookEvents {
         poolKey.currency1.take(poolManager, address(this), uint256(int256(feesAccrued.amount1())), false);
         // TODO Do we need to do some accounting here?
     }
+
+
+    /**
+     * @dev Calls the `PoolManager` to unlock and call back the hook's `unlockCallback` function.
+     *
+     * @param params The ModifyLiquidityParams struct for the liquidity modification
+     * @return callerDelta The balance delta from the liquidity modification. This is the total of both principal and fee deltas.
+     * @return feesAccrued The balance delta of the fees generated in the liquidity range.
+     */
+    function _modifyLiquidity(ModifyLiquidityParams memory params) internal virtual returns (BalanceDelta callerDelta, BalanceDelta feesAccrued) {
+        bytes memory resultData = _unlock(UnlockData({op: UnlockOperation.MODIFY_LIQUIDITY, opData: abi.encode(params)}));
+        (callerDelta, feesAccrued) = abi.decode(resultData, (BalanceDelta, BalanceDelta));
+    }    
 }

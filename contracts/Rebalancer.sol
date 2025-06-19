@@ -71,4 +71,15 @@ abstract contract Rebalancer is BasePoolHelper {
             revert NotEnoughLiquidity(poolKey.toId());
         }
     }
+
+    /**
+     * @dev Calls the `PoolManager` to unlock and call back the hook's `unlockCallback` function.
+     *
+     * @param params The SwapParams struct for the swap 
+     * @return swapDelta The balance delta of the address swapping
+     */
+    function _swap(SwapParams memory params) internal virtual returns (BalanceDelta swapDelta) {
+        bytes memory resultData = _unlock(UnlockData({op: UnlockOperation.SWAP, opData: abi.encode(params)}));
+        swapDelta = abi.decode(resultData, (BalanceDelta));
+    }    
 }

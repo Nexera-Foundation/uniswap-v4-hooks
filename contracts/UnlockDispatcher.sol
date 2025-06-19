@@ -44,29 +44,6 @@ abstract contract UnlockDispatcher is IUnlockCallback, BaseHook {
         return poolManager.unlock(abi.encode(unlockData));
     }
 
-    /**
-     * @dev Calls the `PoolManager` to unlock and call back the hook's `unlockCallback` function.
-     *
-     * @param params The ModifyLiquidityParams struct for the liquidity modification
-     * @return callerDelta The balance delta from the liquidity modification. This is the total of both principal and fee deltas.
-     * @return feesAccrued The balance delta of the fees generated in the liquidity range.
-     */
-    function _modifyLiquidity(ModifyLiquidityParams memory params) internal virtual returns (BalanceDelta callerDelta, BalanceDelta feesAccrued) {
-        bytes memory resultData = _unlock(UnlockData({op: UnlockOperation.MODIFY_LIQUIDITY, opData: abi.encode(params)}));
-        (callerDelta, feesAccrued) = abi.decode(resultData, (BalanceDelta, BalanceDelta));
-    }
-
-    /**
-     * @dev Calls the `PoolManager` to unlock and call back the hook's `unlockCallback` function.
-     *
-     * @param params The SwapParams struct for the swap 
-     * @return swapDelta The balance delta of the address swapping
-     */
-    function _swap(SwapParams memory params) internal virtual returns (BalanceDelta swapDelta) {
-        bytes memory resultData = _unlock(UnlockData({op: UnlockOperation.SWAP, opData: abi.encode(params)}));
-        swapDelta = abi.decode(resultData, (BalanceDelta));
-    }
-
     function _unlockedSwap(SwapParams memory params) internal virtual returns (BalanceDelta swapDelta);
 
     function _unlockedModifyLiquidity(ModifyLiquidityParams memory params) internal virtual returns (BalanceDelta callerDelta, BalanceDelta feesAccrued);
