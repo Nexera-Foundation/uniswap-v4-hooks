@@ -19,6 +19,7 @@ import {CurrencySettler} from "./lib/oz-uniswap-hooks/utils/CurrencySettler.sol"
 import {IHookEvents} from "./lib/oz-uniswap-hooks/interfaces/IHookEvents.sol";
 
 import {LiquidityAmountsExtra} from "./utils/LiquidityAmountsExtra.sol";
+import {CurrencyWithdrawals} from "./CurrencyWithdrawals.sol";
 import {BasePoolHelper} from "./BasePoolHelper.sol";
 
 /**
@@ -30,7 +31,7 @@ import {BasePoolHelper} from "./BasePoolHelper.sol";
  * - _createPosition()
  * - _removePosition()
  */
-abstract contract LiquidityAccounting is ERC20, BasePoolHelper, IHookEvents {
+abstract contract LiquidityAccounting is ERC20, BasePoolHelper, CurrencyWithdrawals, IHookEvents {
     bytes32 constant MANAGED_POSITION_SALT = bytes32(0); // We are only using one position
 
     using CurrencySettler for Currency;
@@ -187,8 +188,7 @@ abstract contract LiquidityAccounting is ERC20, BasePoolHelper, IHookEvents {
         }
 
         // Send the tokens to the sender
-        poolKey.currency0.take(poolManager, _msgSender(), token0, true);
-        poolKey.currency1.take(poolManager, _msgSender(), token1, true);
+        _withdraw(_msgSender(), [poolKey.currency0, poolKey.currency1], [token0, token1]);
     }
 
     /**

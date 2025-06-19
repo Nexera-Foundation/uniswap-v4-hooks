@@ -11,7 +11,8 @@ abstract contract UnlockDispatcher is IUnlockCallback, BaseHook {
 
     enum UnlockOperation {
         SWAP,
-        MODIFY_LIQUIDITY
+        MODIFY_LIQUIDITY,
+        WITHDRAW_CURRENCIES
         // TODO Add BATCH operation, which executes a sequence of others
     }
 
@@ -30,6 +31,8 @@ abstract contract UnlockDispatcher is IUnlockCallback, BaseHook {
             ModifyLiquidityParams memory modifyLiquidityParams = abi.decode(ud.opData, (ModifyLiquidityParams));
             (BalanceDelta callerDelta, BalanceDelta feesAccrued) = _unlockedModifyLiquidity(modifyLiquidityParams);
             return abi.encode(callerDelta, feesAccrued);
+        } else if (ud.op == UnlockOperation.WITHDRAW_CURRENCIES) {
+            return _unlockedWithdrawCurrencies(ud.opData);
         } else {
             revert UnknownUnlockOperation();
         }
@@ -47,4 +50,8 @@ abstract contract UnlockDispatcher is IUnlockCallback, BaseHook {
     function _unlockedSwap(SwapParams memory params) internal virtual returns (BalanceDelta swapDelta);
 
     function _unlockedModifyLiquidity(ModifyLiquidityParams memory params) internal virtual returns (BalanceDelta callerDelta, BalanceDelta feesAccrued);
+
+
+    // See CurrencyWithdrawals
+    function _unlockedWithdrawCurrencies(bytes memory data) internal virtual returns(bytes memory);
 }
