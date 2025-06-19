@@ -11,11 +11,13 @@ This repository, developed by the [Nexera Foundation](https://nexera.foundation/
 -   [Introduction](#introduction)
 -   [What are Uniswap V4 Hooks?](#what-are-uniswap-v4-hooks)
 -   [Core Contracts](#core-contracts)
+    -   [`LVRLiquidityManager` (LVR-Based Liquidity Management Hook)](#lvrliquiditymanager-lvr-based-liquidity-management-hook)
     -   [`ZeroILHook` (Abstract Base Contract)](#zeroilhook-abstract-base-contract)
     -   [`ZeroILSwapSamePoolHook` (Concrete Implementation)](#zeroilswapsamepoolhook-concrete-implementation)
     -   [`UniswapV4HookFactory` (Deployment Factory)](#uniswapv4hookfactory-deployment-factory)
     -   [Peripheral Contracts](#peripheral-contracts)
 -   [How It Works: Zero IL Strategy](#how-it-works-zero-il-strategy)
+-   [How It Works: LVR Liquidity Management Strategy](#how-it-works-lvr-liquidity-management-strategy)
     -   [IL Calculation & Compensation Trigger](#il-calculation--compensation-trigger)
     -   [Compensation Swap Mechanism](#compensation-swap-mechanism)
     -   [Concentrated Liquidity Position Management](#concentrated-liquidity-position-management)
@@ -32,12 +34,14 @@ This repository, developed by the [Nexera Foundation](https://nexera.foundation/
 -   [Usage (Hardhat)](#usage-hardhat)
     -   [Compiling Contracts](#compiling-contracts)
     -   [Running Tests](#running-tests)
-    -   [Deploying the Hook](#deploying-the-hook)
-        -   [Step 1: Deploy the `UniswapV4HookFactory`](#step-1-deploy-the-uniswapv4hookfactory)
-        -   [Step 2: Find the Correct Salt](#step-2-find-the-correct-salt)
-        -   [Step 3: Deploy the Hook via the Factory](#step-3-deploy-the-hook-via-the-factory)
+    -   [Deploying Hooks](#deploying-hooks)
+        -   [Deploying ZeroILSwapSamePoolHook](#deploying-zeroilswapsamepoolhook)
+            -   [Step 1: Deploy the `UniswapV4HookFactory`](#step-1-deploy-the-uniswapv4hookfactory)
+            -   [Step 2: Find the Correct Salt](#step-2-find-the-correct-salt)
+            -   [Step 3: Deploy the Hook via the Factory](#step-3-deploy-the-hook-via-the-factory)
+        -   [Deploying LVRLiquidityManager](#deploying-lvrliquiditymanager)
     -   [Configuring the Deployed Hook](#configuring-the-deployed-hook)
-    -   [Integrating the Hook with a Uniswap V4 Pool](#integrating-the-hook-with-a-uniswap-v4-pool)
+    -   [Integrating Hooks with Uniswap V4 Pools](#integrating-hooks-with-uniswap-v4-pools)
 -   [Development Environment](#development-environment)
 -   [Contributing](#contributing)
 -   [License](#license)
@@ -45,11 +49,13 @@ This repository, developed by the [Nexera Foundation](https://nexera.foundation/
 
 ## Introduction
 
-Uniswap V4's hook architecture allows for powerful customization of pool behavior. This repository implements a `ZeroILHook` strategy aimed at reducing or eliminating impermanent loss for liquidity providers in concentrated liquidity pools.
+Uniswap V4's hook architecture allows for powerful customization of pool behavior. This repository implements advanced liquidity management strategies for liquidity providers, featuring two distinct approaches:
 
-The core idea is to monitor the LP's position relative to a baseline and execute compensatory swaps when the IL exceeds a configurable threshold, effectively trying to rebalance the position back towards its initial value proposition. LP shares in pools managed by this hook are represented by ERC1155 tokens.
+1. **`ZeroILHook`:** A strategy aimed at reducing or eliminating impermanent loss by monitoring LP positions and executing compensatory swaps when IL exceeds configurable thresholds. LP shares are represented by ERC1155 tokens.
 
-A `UniswapV4HookFactory` contract is provided for deterministic `CREATE2` deployment, ensuring the hook addresses meet Uniswap V4's specific requirements.
+2. **`LVRLiquidityManager`:** A sophisticated liquidity optimization system based on Loss-Versus-Rebalancing (LVR) analysis. This hook uses LayerZero's cross-chain reading capabilities to analyze historical fee rates and automatically rebalance positions for optimal returns. LP shares are represented by ERC20 tokens.
+
+A `UniswapV4HookFactory` contract is provided for deterministic `CREATE2` deployment, ensuring hook addresses meet Uniswap V4's specific requirements.
 
 ## What are Uniswap V4 Hooks?
 
@@ -65,6 +71,47 @@ Key aspects:
 For a deeper understanding, consult the [official Uniswap V4 documentation](https://docs.uniswap.org/contracts/v4/overview). <!-- Verify link -->
 
 ## Core Contracts
+
+### `LVRLiquidityManager` (LVR-Based Liquidity Management Hook)
+
+*   **File:** `contracts/LVRLiquidityManager.sol`
+*   **Inherits:** `PositionManager`, `LZReadStatDataProvider`, `Ownable`, `ERC20`, `BaseHook`, `BasePoolHelper`, `OAppRead`
+*   **Description:** A sophisticated liquidity management hook that optimizes liquidity provision based on Loss-Versus-Rebalancing (LVR) analysis. This hook automatically rebalances positions using historical fee rate data obtained through LayerZero's cross-chain reading capabilities.
+
+*   **Key Components:**
+    *   **`StatCollectorHook` & `LZReadStatDataProvider`:** Collects liquidity change data from the pool and retrieves historical data via LayerZero Read to calculate the pool's fee rate over time.
+    *   **`LiquidityAccounting`:** Manages liquidity addition/removal operations and handles minting/burning of ERC20 share tokens representing LP positions.
+    *   **`PositionManager` & `Rebalancer`:** Analyzes the calculated fee rate and determines optimal fund allocation, then executes rebalancing to match the target proportions.
+    *   **`LVRLiquidityManager`:** The main contract that orchestrates all components into a unified liquidity management system.
+
+*   **Configuration:**
+    *   **Creation Time (Constructor Parameters):**
+        *   `poolManager`: Address of the Uniswap V4 Pool Manager
+        *   `poolKey`: Pool configuration (can be constructed before pool creation)
+        *   `name` & `symbol`: ERC20 share token identifiers
+        *   `LZReadConfig`: LayerZero configuration including:
+            *   `endpoint`: LayerZero endpoint address
+            *   `eid`: Endpoint ID for the target chain
+            *   `readChannel`: LayerZero read channel identifier
+            *   `confirmations`: Required block confirmations before LZ read can query chain state
+            *   `delegate`: Address authorized to modify low-level LZ configuration (recommended: multisig for production)
+    
+    *   **Runtime Configuration (Modifiable During Lifetime):**
+        *   Algorithm parameters (scaled to 1e18, based on [LVR research](https://www.notion.so/nuant/Uniswap-Liquidity-Allocation-1cada1ba918d805895f6c5fbf40bfd53)):
+            *   `gamma`: Risk aversion parameter
+            *   `volatility`: Expected asset volatility
+            *   `drift`: Expected price drift
+        *   LayerZero Read configuration:
+            *   `feeRateReadingInterval`: Fee rate calculation frequency (seconds)
+            *   `intermediateLiquidityPoints`: Additional liquidity sampling points for averaging between updates
+
+*   **Backend Requirements:**
+    *   **Fee Rate Updates:** Periodically call `isReadyToReadFeeRate()` and execute `initiateReadFeeRate()` when it returns `true`
+    *   **Position Updates:** Periodically call `isReadyToUpdatePosition()` and execute `updatePosition()` when it returns `true` (typically after successful fee rate updates)
+
+*   **Usage Functions:**
+    *   **`addLiquidity(amount0Desired, amount1Desired, amount0Min, amount1Min, deadline)`:** Adds liquidity to the hook and mints ERC20 shares. Parameters define maximum amounts to deposit, minimum amounts required, and transaction deadline.
+    *   **`removeLiquidity(shares, amount0Min, amount1Min, deadline)`:** Burns ERC20 shares and withdraws underlying liquidity. Parameters specify shares to burn, minimum token amounts to receive, and transaction deadline.
 
 ### `ZeroILHook` (Abstract Base Contract)
 
@@ -153,6 +200,43 @@ The `ZeroILHook` aims to counteract impermanent loss through the following mecha
 
 7.  **`PoolManager.lock`:**
     *   All operations modifying pool state (swaps, position modifications) performed by the hook are wrapped in `poolManager.lock(...)`. This ensures atomicity and prevents reentrancy issues by granting the hook temporary exclusive access to the pool state. The hook calls its own internal functions (e.g., `addLiquidityInsideLock`, `compensateILSwapInsideLock`) via this lock mechanism using `abi.encodeCall`.
+
+## How It Works: LVR Liquidity Management Strategy
+
+The `LVRLiquidityManager` implements an advanced liquidity optimization strategy based on Loss-Versus-Rebalancing (LVR) research. This approach analyzes historical trading patterns to optimize liquidity allocation and maximize returns while minimizing losses from adverse selection.
+
+### Key Components & Workflow:
+
+1.  **Data Collection & Analysis:**
+    *   **`StatCollectorHook`:** Monitors and records all liquidity changes, swaps, and other pool activities in real-time.
+    *   **`LZReadStatDataProvider`:** Uses LayerZero's cross-chain reading capabilities to retrieve historical pool data from previous time periods.
+    *   **Fee Rate Calculation:** Combines current and historical data to calculate the pool's effective fee rate over configurable time intervals.
+
+2.  **Algorithm-Based Position Optimization:**
+    *   **LVR Analysis:** Implements research-based algorithms that analyze the relationship between fee earnings and losses from adverse selection (LVR).
+    *   **Risk Parameters:** Uses configurable parameters (gamma, volatility, drift) scaled to 1e18 precision to model market conditions and risk preferences.
+    *   **Optimal Allocation:** Calculates the theoretically optimal liquidity distribution based on the analyzed fee rates and market parameters.
+
+3.  **Automated Rebalancing:**
+    *   **`PositionManager`:** Determines when current positions deviate significantly from optimal allocations.
+    *   **`Rebalancer`:** Executes necessary position adjustments to realign with target proportions.
+    *   **Scheduled Updates:** Rebalancing occurs at regular intervals defined by `feeRateReadingInterval`.
+
+4.  **ERC20 Share Management:**
+    *   **`LiquidityAccounting`:** Manages the relationship between user deposits and their proportional shares in the optimized position.
+    *   **Token Representation:** Users receive ERC20 tokens representing their stake in the managed liquidity pool.
+    *   **Proportional Withdrawals:** Users can redeem shares for their proportional share of the current pool value.
+
+5.  **Cross-Chain Data Integration:**
+    *   **LayerZero Read:** Enables the hook to access historical data from other chains or previous time periods without relying on centralized oracles.
+    *   **Configurable Confirmations:** Ensures data integrity by requiring a specified number of block confirmations before reading chain state.
+    *   **Decentralized Operation:** Reduces reliance on external data providers while maintaining access to comprehensive historical information.
+
+### Operational Requirements:
+
+*   **Backend Automation:** Requires automated systems to trigger fee rate updates and position rebalancing at appropriate intervals.
+*   **LayerZero Integration:** Depends on LayerZero infrastructure for cross-chain data access and historical analysis.
+*   **Continuous Monitoring:** Benefits from continuous monitoring of market conditions and algorithm performance.
 
 ## Prerequisites
 
@@ -261,7 +345,11 @@ npx hardhat coverage
 The report will typically be saved in the  `coverage/` directory.
 -->
 
-### Deploying the Hook
+### Deploying Hooks
+
+Both hook implementations can be deployed through different approaches depending on the specific requirements:
+
+#### Deploying ZeroILSwapSamePoolHook
 
 Deploying the `ZeroILSwapSamePoolHook` requires using the `UniswapV4HookFactory` to ensure the hook address meets Uniswap V4's validation requirements.
 
@@ -354,9 +442,30 @@ const receipt = await tx.wait();
 console.log("Hook configured successfully. Tx:", receipt.transactionHash);
 ```
 
-### Integrating the Hook with a Uniswap V4 Pool
+#### Deploying LVRLiquidityManager
 
-With the hook deployed and configured for the specific pool parameters, you can now initialize the pool via the `PoolManager`.
+The `LVRLiquidityManager` can be deployed directly without requiring the factory, as it doesn't need specific address validation for hook flags in the same way.
+
+1.  **Prepare Deployment Parameters:**
+    *   `poolManager`: Address of the Uniswap V4 Pool Manager
+    *   `poolKey`: Pool configuration structure
+    *   `name` & `symbol`: ERC20 token identifiers for LP shares
+    *   `LZReadConfig`: LayerZero configuration object containing endpoint, EID, read channel, confirmations, and delegate addresses
+
+2.  **Deploy the Contract:**
+    ```bash
+    # Example deployment script for LVRLiquidityManager
+    npx hardhat run scripts/deployLVRManager.ts --network sepolia
+    ```
+
+3.  **Post-Deployment Configuration:**
+    *   Set algorithm parameters (gamma, volatility, drift)
+    *   Configure LayerZero read settings (feeRateReadingInterval, intermediateLiquidityPoints)
+    *   Set up backend automation for fee rate updates and position rebalancing
+
+### Integrating Hooks with Uniswap V4 Pools
+
+With either hook deployed and configured for the specific pool parameters, you can now initialize the pool via the `PoolManager`.
 
 1.  **Pool Parameters:** Have the `token0`, `token1`, `fee`, `tickSpacing`, the deployed `hookAddress`, and the desired `initialSqrtPriceX96` ready.
 2.  **Construct `PoolKey`:** Create the `PoolKey` struct, ensuring the `hooks` field points to your deployed hook address.
@@ -411,8 +520,9 @@ This project leverages a standard Hardhat setup:
 *   **Core Libraries:**
     *   [Ethers.js](https://docs.ethers.io/): For blockchain interaction in scripts and tests.
     *   [TypeChain](https://github.com/dethcrypto/TypeChain): For generating TypeScript contract bindings (`@typechain/hardhat`).
-    *   [OpenZeppelin Contracts](https://github.com/OpenZeppelin/openzeppelin-contracts): For `Ownable`, `ERC1155`, `Create2`, `SafeERC20`.
+    *   [OpenZeppelin Contracts](https://github.com/OpenZeppelin/openzeppelin-contracts): For `Ownable`, `ERC1155`, `ERC20`, `Create2`, `SafeERC20`.
     *   [Uniswap V4 Core](https://github.com/Uniswap/v4-core): Interfaces (`IPoolManager`, `IHooks`), types (`PoolKey`, `BalanceDelta`), and libraries (`Hooks`, `TickMath`, etc.). Referenced via `@uniswap/v4-core`.
+    *   [LayerZero OApp](https://github.com/LayerZero-Labs/oapp-evm): For cross-chain functionality and data reading capabilities (`@layerzerolabs/oapp-evm`).
 *   **Testing:** Mocha, Chai (implicitly via Hardhat).
 *   **Helpers/Plugins:**
     *   `hardhat-gas-reporter`: For estimating gas costs (`hardhat-gas-reporter`).
