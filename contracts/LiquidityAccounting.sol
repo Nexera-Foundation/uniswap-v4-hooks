@@ -165,21 +165,30 @@ abstract contract LiquidityAccounting is ERC20, BasePoolHelper, IHookEvents {
         uint160 sqrtPriceX96 = _currentSqrtPriceX96();
 
         // Get the liquidity modification parameters and the amount of liquidity shares to burn
-        (ModifyLiquidityParams memory modifyParams, uint256 shares) = _getRemoveLiquidity(sqrtPriceX96, params);
+        (ModifyLiquidityParams memory modifyParams, uint256 token0, uint256 token1) = _getRemoveLiquidity(sqrtPriceX96, params);
 
         // Apply the liquidity modification
         (BalanceDelta callerDelta, BalanceDelta feesAccrued) = _modifyLiquidity(modifyParams);
 
         // Burn the liquidity shares from the sender
-        _burn(_msgSender(), shares);
+        _burn(_msgSender(), params.shares);
 
         // Get the principal delta by subtracting the fee delta from the caller delta (-= is not supported)
         delta = callerDelta - feesAccrued;
+
+        // Calculate amounts to send to the sender
+        token0 += uint256(uint128(delta.amount0()));
+        token1 += uint256(uint128(delta.amount1()));
+
 
         // Check for slippage
         if (uint128(delta.amount0()) < params.amount0Min || uint128(delta.amount1()) < params.amount1Min) {
             revert TooMuchSlippage();
         }
+
+        // Send the tokens to the sender
+        poolKey.currency0.take(poolManager, _msgSender(), token0, true);
+        poolKey.currency1.take(poolManager, _msgSender(), token1, true);
     }
 
     /**
@@ -237,26 +246,21 @@ abstract contract LiquidityAccounting is ERC20, BasePoolHelper, IHookEvents {
      * @param params The parameters for the liquidity removal.
      * @return modify The encoded parameters for the liquidity removal, which must follow the
      * same encoding structure as in `_getAddLiquidity` and `_modifyLiquidity`.
-     * @return shares The liquidity shares to burn.
-     *
+     * @return token0 Amount of token0 to send to user
+     * @return token1 Amount of token1 to send to user
      */
     function _getRemoveLiquidity(
         uint160 sqrtPriceX96,
         RemoveLiquidityParams memory params
-    ) internal virtual returns (ModifyLiquidityParams memory modify, uint256 shares) {
+    ) internal virtual returns (ModifyLiquidityParams memory modify, uint256 token0, uint256 token1) {
         ManagedPosition memory position_ = position;
 
         // Calculating liquidity of shares
         (uint256 reserve0, uint256 reserve1) = reservesBalances();
-        uint256 reservesLiquidity = LiquidityAmounts.getLiquidityForAmounts(
-            sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(position_.tickLower),
-            TickMath.getSqrtPriceAtTick(position_.tickUpper),
-            reserve0,
-            reserve1
-        );
-        uint256 currentLiquidity = _liquidityOfManagedPosition() + reservesLiquidity;
+        uint256 currentLiquidity = _liquidityOfManagedPosition();
         uint256 liquidityDelta = (params.shares * currentLiquidity) / totalSupply();
+        token0 = (reserve0 * params.shares) / totalSupply();
+        token1 = (reserve1 * params.shares) / totalSupply();        
 
         modify = ModifyLiquidityParams({
             liquidityDelta: int256(liquidityDelta), // TODO check for overflow
@@ -264,8 +268,6 @@ abstract contract LiquidityAccounting is ERC20, BasePoolHelper, IHookEvents {
             tickUpper: position_.tickUpper,
             salt: MANAGED_POSITION_SALT
         });
-
-        // TODO Handle when position does not have enough liquidity (it is in reserves)
     }
 
     function _currentSqrtPriceX96() internal view returns (uint160) {
