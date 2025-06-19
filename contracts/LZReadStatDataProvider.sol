@@ -15,7 +15,6 @@ abstract contract LZReadStatDataProvider is OAppRead, StatCollectorHook, IOAppRe
 
     error NotReadyToReadFeeRate();
 
-
     /// @dev Valid LZ Read channel ids start from `eid > 4294965694` (which is `type(uint32).max - 1600`).
     uint32 internal constant LZ_READ_CHANNEL_EID_THRESHOLD = 4294965694;
 
@@ -36,8 +35,8 @@ abstract contract LZReadStatDataProvider is OAppRead, StatCollectorHook, IOAppRe
         uint256 fee1;
     }
 
-    uint256 public feeRateReadingInterval; //Interval for calculating fee rate
-    uint256 public intermediateLiquidityPoints; //How many additional timestamps to add for more precise liquidity estimation
+    uint256 public feeRateReadingInterval; // Interval for calculating fee rate
+    uint256 public intermediateLiquidityPoints; // How many additional timestamps to add for more precise liquidity estimation
 
     uint256 public lastFeeRateUpdateTimestamp; // Timestamp when last fee rate was calculated
     uint256 public lastFeeRate; // Last calculated fee rate multiplied to 1e18
@@ -154,7 +153,7 @@ abstract contract LZReadStatDataProvider is OAppRead, StatCollectorHook, IOAppRe
                 isBlockNum: false,
                 blockNumOrTimestamp: timestamps[i],
                 confirmations: _confirmations,
-                to: address(this), // We are reading form our own contract
+                to: address(this), // We are reading from our own contract
                 callData: readCalldata
             });
         }

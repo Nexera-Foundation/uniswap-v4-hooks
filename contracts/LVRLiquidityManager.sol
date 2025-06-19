@@ -8,6 +8,7 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {SwapParams, ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {OAppRead} from "@layerzerolabs/oapp-evm/contracts/oapp/OAppRead.sol";
+
 import {BaseHook} from "./lib/oz-uniswap-hooks/base/BaseHook.sol";
 import {LiquidityAccounting} from "./LiquidityAccounting.sol";
 import {PositionManager} from "./PositionManager.sol";
@@ -60,7 +61,7 @@ contract LVRLiquidityManager is PositionManager, LZReadStatDataProvider {
     // ========== Functions required by Solidity for correct inheritance =============
 
     function _afterInitialize(address sender, PoolKey calldata key, uint160 sqrtPriceX96, int24 tick) internal virtual override(BaseHook, StatCollectorHook) returns (bytes4) {
-        super._afterInitialize(sender, key, sqrtPriceX96, tick);
+        return super._afterInitialize(sender, key, sqrtPriceX96, tick);
     }
 
     function _afterSwap(
@@ -80,7 +81,7 @@ contract LVRLiquidityManager is PositionManager, LZReadStatDataProvider {
         BalanceDelta delta1,
         bytes calldata hookData
     ) internal virtual override(BaseHook, StatCollectorHook) returns (bytes4, BalanceDelta) {
-        super._afterAddLiquidity(sender, key, params, delta0, delta1, hookData);
+        return super._afterAddLiquidity(sender, key, params, delta0, delta1, hookData);
     }
     function _afterRemoveLiquidity(
         address sender,

@@ -23,6 +23,7 @@ import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
 import {SafeCast} from "@uniswap/v4-core/src/libraries/SafeCast.sol";
 import {BaseHook} from "@uniswap/v4-periphery/src/utils/BaseHook.sol";
 import {LiquidityAmounts} from "@uniswap/v4-periphery/src/libraries/LiquidityAmounts.sol";
+
 import {LiquidityAmountsExtra} from "./utils/LiquidityAmountsExtra.sol";
 import {SafeCallback} from "./utils/SafeCallback.sol";
 
@@ -241,15 +242,15 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
         // When withdrawing liquidity, we also withdrawing part of it from Reserve, proportional to current reserve
         uint128 liquidityInReserve = _calculateLiquidityInReserve(poolId, pd);
         uint128 hookPositionLiquidity = _getHookLiquidity(poolId);
-        uint128 liquidityToWihdrawFromReserve;
+        uint128 liquidityToWithdrawFromReserve;
         uint128 liquidityToWithdrawFromPosition;
         uint256 amountToWithdrawFromReserve;
         if (liquidityInReserve == 0) {
             liquidityToWithdrawFromPosition = uint128(amount.toInt128());
         } else {
-            liquidityToWihdrawFromReserve = uint128(FullMath.mulDiv(amount, liquidityInReserve, hookPositionLiquidity));
-            liquidityToWithdrawFromPosition = uint128(amount.toInt128()) - liquidityToWihdrawFromReserve;
-            amountToWithdrawFromReserve = FullMath.mulDiv(pd.zeroILReserveAmount, liquidityToWihdrawFromReserve, liquidityInReserve);
+            liquidityToWithdrawFromReserve = uint128(FullMath.mulDiv(amount, liquidityInReserve, hookPositionLiquidity));
+            liquidityToWithdrawFromPosition = uint128(amount.toInt128()) - liquidityToWithdrawFromReserve;
+            amountToWithdrawFromReserve = FullMath.mulDiv(pd.zeroILReserveAmount, liquidityToWithdrawFromReserve, liquidityInReserve);
         }
 
         _burn(_msgSender(), uint256(PoolId.unwrap(poolId)), amount);
@@ -441,7 +442,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
                 //We don't have enough reserve, so need to remove the diff from our position
                 uint128 liquidityToRemove = liquidityToSwap - liquidityInReserve;
 
-                // BeforeSwap we need to remove liquidity from position
+                // Before swap we need to remove liquidity from position
                 poolManager.modifyLiquidity(
                     key,
                     ModifyLiquidityParams({
@@ -533,7 +534,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
     function _settleDelta(address sender, Currency currency, uint128 amount) internal {
         poolManager.sync(currency);
         if (currency.isAddressZero()) {
-            // Here we always send from our address and require amount to pe paid with `addLiquidity()` call
+            // Here we always send from our address and require amount to be paid with `addLiquidity()` call
             if (address(this).balance != amount) revert NativeCurrencyNotReceived();
             poolManager.settle{value: amount}();
         } else {
@@ -559,7 +560,7 @@ abstract contract ZeroILHook is IUnlockCallback, BaseHook, SafeCallback, ERC1155
     }
 
     function _settleClaimsDelta(Currency c) internal {
-        int256 delta = poolManager.currencyDelta(address(this), c); // Delta is postive when we owe to the pool
+        int256 delta = poolManager.currencyDelta(address(this), c); // Delta is positive when we owe to the pool
         if (delta > 0) {
             poolManager.burn(address(this), c.toId(), uint256(delta));
         } else {

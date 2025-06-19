@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {LiquidityAmounts} from "@uniswap/v4-periphery/src/libraries/LiquidityAmounts.sol";
+
 import {LiquidityAccounting} from "./LiquidityAccounting.sol";
 import {Rebalancer} from "./Rebalancer.sol";
 
@@ -18,7 +19,6 @@ abstract contract PositionManager is Ownable, LiquidityAccounting, Rebalancer {
     enum PositionOperation {
         REBALANCE, CLOSE
     }
-
 
     uint256 gamma; // Constant parameter of calculations, scaled by WAD
     uint256 volatility; // Current volatility of the spot process, scaled by WAD
@@ -60,7 +60,6 @@ abstract contract PositionManager is Ownable, LiquidityAccounting, Rebalancer {
         // Create new position
         _createPosition(liquidityDelta, sqrtPriceAX96, sqrtPriceBX96);
     }
-
 
     /**
      * Calculates what to do with position
