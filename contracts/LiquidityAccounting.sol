@@ -17,6 +17,7 @@ import {LiquidityAmounts} from "@uniswap/v4-periphery/src/libraries/LiquidityAmo
 import {BaseHook} from "./lib/oz-uniswap-hooks/base/BaseHook.sol";
 import {CurrencySettler} from "./lib/oz-uniswap-hooks/utils/CurrencySettler.sol";
 import {IHookEvents} from "./lib/oz-uniswap-hooks/interfaces/IHookEvents.sol";
+
 import {LiquidityAmountsExtra} from "./utils/LiquidityAmountsExtra.sol";
 import {BasePoolHelper} from "./BasePoolHelper.sol";
 
@@ -30,7 +31,7 @@ import {BasePoolHelper} from "./BasePoolHelper.sol";
  * - _removePosition()
  */
 abstract contract LiquidityAccounting is ERC20, BasePoolHelper, IHookEvents {
-    bytes32 constant MANAGED_POSITION_SALT = bytes32(0); // We aer only using one position
+    bytes32 constant MANAGED_POSITION_SALT = bytes32(0); // We are only using one position
 
     using CurrencySettler for Currency;
     using CurrencyLibrary for Currency;
@@ -61,7 +62,7 @@ abstract contract LiquidityAccounting is ERC20, BasePoolHelper, IHookEvents {
 
     /**
      * @dev The pool is in a state when it has shares but no liquidity.
-     * Since this state is not correct, we can not add mor liquidity to it until this is somehow solved
+     * Since this state is not correct, we can not add more liquidity to it until this is somehow solved
      */
     error InconsistentState();
 
@@ -86,7 +87,6 @@ abstract contract LiquidityAccounting is ERC20, BasePoolHelper, IHookEvents {
         int24 tickUpper;
     }
 
-
     ManagedPosition public position;
 
     /**
@@ -100,11 +100,8 @@ abstract contract LiquidityAccounting is ERC20, BasePoolHelper, IHookEvents {
     }
 
     function reservesBalances() public view returns (uint256 balance0, uint256 balance1) {
-        balance0 = poolKey.currency0.balanceOf(address(this));
-        balance1 = poolKey.currency0.balanceOf(address(this));
-        // TODO Solve: The code bellow looks incorrect because we have to settle all debts before operation can be complete. But I don't know...
-        // balance0 = IERC6909Claims(address(_poolManager)).balanceOf(address(this), pk.currency0.toId());
-        // balance1 = IERC6909Claims(address(_poolManager)).balanceOf(address(this), pk.currency1.toId());
+        balance0 = poolManager.balanceOf(address(this), poolKey.currency0.toId());
+        balance1 = poolManager.balanceOf(address(this), poolKey.currency1.toId());
     }
 
     /**
