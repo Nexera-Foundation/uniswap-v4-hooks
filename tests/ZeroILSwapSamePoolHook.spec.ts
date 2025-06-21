@@ -28,7 +28,7 @@ const HOOK_PERMISSIONS = {
 const ONE_TOKEN: bigint = ethers.parseEther("1");
 
 export default async function suite() {
-    makeSuite("UniswapV4", (testEnv: TestEnv) => {
+    makeSuite("ZeroILSwapSamePoolHook", (testEnv: TestEnv) => {
         let deployer: SignerWithAddress;
         let users: SignerWithAddress[];
 
@@ -97,16 +97,16 @@ export default async function suite() {
 
             let deploySalt = await run("findHookSalt", {
                 uniswapV4HookFactoryAddress: await UniswapV4Hook.getAddress(),
-                startId: "17000",
+                startId: "0",
                 limit: "5000",
                 hookBytecode: hookBytecode,
                 hookArgs: hookArgs,
                 permissions: JSON.stringify(HOOK_PERMISSIONS),
             });
 
-            zeroILHookAddress = await UniswapV4Hook.deploy.staticCall(hookBytecode, hookArgs, deploySalt);
+            zeroILHookAddress = await UniswapV4Hook.deployOwnable.staticCall(hookBytecode, hookArgs, deploySalt);
 
-            await UniswapV4Hook.deploy(hookBytecode, hookArgs, deploySalt);
+            await UniswapV4Hook.deployOwnable(hookBytecode, hookArgs, deploySalt);
 
             ZeroILHook = (await ethers.getContractAt("ZeroILSwapSamePoolHook", zeroILHookAddress)) as ZeroILSwapSamePoolHook;
 
@@ -160,7 +160,7 @@ export default async function suite() {
             await ethers.provider.send("evm_revert", [snap]);
         });
 
-        describe("UniswapV4 Tests", async () => {
+        describe("ZeroILSwapSamePoolHook Tests", async () => {
             it("Should Increase Liquidity of A & B", async () => {
                 await token_A.connect(users[0]).approve(zeroILHookAddress, ONE_TOKEN * ethers.toBigInt("1000"));
                 await token_B.connect(users[0]).approve(zeroILHookAddress, ONE_TOKEN * ethers.toBigInt("1000"));

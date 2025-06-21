@@ -1,8 +1,8 @@
 import setup from "./__setup.spec";
 
-import UniswapV4Hook from "./UniswapV4Hook.spec";
+import ZeroILSwapSamePoolHook from "./ZeroILSwapSamePoolHook.spec";
 
 // Execute tests here
 setup();
 
-UniswapV4Hook();
+ZeroILSwapSamePoolHook();
